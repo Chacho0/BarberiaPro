@@ -1,0 +1,39 @@
+﻿@page "/"
+@layout VacioLayout
+@using BarberiaPro.Services
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+
+<h3>Login</h3>
+
+<div class="login-container">
+    <input type="email" placeholder="Correo" @bind="correo" />
+    <input type="password" placeholder="Contraseña" @bind="password" />
+    <button @onclick="IniciarSesion">Iniciar Sesión</button>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error-message">@errorMessage</div>
+    }
+</div>
+
+@code {
+    private string correo = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+
+    private async Task IniciarSesion()
+    {
+        errorMessage = string.Empty;
+
+        var result = await AuthService.LoginAsync(correo, password);
+
+        if (result.Success)
+        {
+            Navigation.NavigateTo("/home");
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+}
