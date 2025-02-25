@@ -32,17 +32,38 @@
                     return new LoginResult { Success = false, ErrorMessage = "Credenciales inválidas" };
                 }
 
-                return new LoginResult { Success = true };
+                return new LoginResult { Success = true, UserId = usuario.IdUsuario }; // Devolver el ID del usuario
             }
             finally
             {
                 _semaphore.Release(); // Liberar el acceso
             }
         }
+
+        public async Task<LoginResult> RegistrarUsuarioAsync(Usuario usuario)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            // Verificar si el correo ya está registrado
+            var usuarioExistente = await context.Usuarios
+                .FirstOrDefaultAsync(u => u.Correo == usuario.Correo);
+
+            if (usuarioExistente != null)
+            {
+                return new LoginResult { Success = false, ErrorMessage = "El correo ya está registrado." };
+            }
+
+            // Guardar el nuevo usuario
+            context.Usuarios.Add(usuario);
+            await context.SaveChangesAsync();
+
+            return new LoginResult { Success = true };
+        }
     }
     public class LoginResult
     {
         public bool Success { get; set; }
         public string ErrorMessage { get; set; }
+        public int UserId { get; set; } // Añadir el ID del usuario
     }
 }

@@ -4,6 +4,7 @@ using BarberiaPro.Data;
 using BarberiaPro.Context;
 using Microsoft.EntityFrameworkCore;
 using BarberiaPro.Services;
+using BarberiaPro.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,10 +14,15 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Conexion")));
+builder.Services.AddScoped<UserStateService>();
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<ServicioService>();
 builder.Services.AddScoped<EmpleadoService>();
 builder.Services.AddScoped<CargoService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<CitaService>();
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

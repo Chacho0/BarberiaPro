@@ -1,41 +1,37 @@
-﻿.login-container {
+﻿/* Estilos para el contenedor de registro */
+.registro-container {
     max-width: 400px;
     margin: 0 auto;
     padding: 20px;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 10px;
     background-color: #f9f9f9;
 }
 
-    .login-container h3 {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .login-container input {
+    .registro-container input {
         width: 100%;
         padding: 10px;
-        margin: 10px 0;
+        margin-bottom: 10px;
         border: 1px solid #ccc;
         border-radius: 5px;
     }
 
-    .login-container button {
+    .registro-container button {
         width: 100%;
         padding: 10px;
-        background-color: #007bff;
-        color: white;
+        margin-bottom: 10px;
         border: none;
         border-radius: 5px;
+        background-color: #007bff;
+        color: white;
         cursor: pointer;
     }
 
-        .login-container button:hover {
-            background-color: #0056b3;
+        .registro-container button.btn-login {
+            background-color: #6c757d;
         }
 
 .error-message {
     color: red;
-    text-align: center;
     margin-top: 10px;
 }

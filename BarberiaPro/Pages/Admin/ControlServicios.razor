@@ -1,0 +1,225 @@
+﻿@page "/control-servicios"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject ServicioService ServicioService
+@inject NavigationManager Navigation
+@inject UserStateService UserStateService
+@inject UsuarioService UsuarioService
+
+<h3>Control de Servicios</h3>
+
+@if (usuarioEsAdmin)
+{
+    @if (cargando)
+    {
+        <p>Cargando servicios...</p>
+    }
+    else if (errorCargando)
+    {
+        <p class="error-message">Error al cargar los servicios. Inténtalo de nuevo más tarde.</p>
+    }
+    else
+    {
+        <!-- Campo de búsqueda -->
+        <div class="form-group">
+            <label>Buscar Servicio:</label>
+            <InputText @bind-Value="busqueda" class="form-control" placeholder="Ingrese el tipo de servicio" />
+            <button class="btn btn-primary mt-2" @onclick="BuscarServicios">Buscar</button>
+        </div>
+
+        <!-- Botón para agregar servicio -->
+        <button class="btn btn-success" @onclick="AbrirModalAgregarServicio">Agregar Servicio</button>
+
+        <!-- Tabla de servicios -->
+        <table class="tabla-servicios">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo de Servicio</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var servicio in servicios)
+                {
+                    <tr>
+                        <td>@servicio.IdServicio</td>
+                        <td>@servicio.TipoServicio</td>
+                        <td>@servicio.Precio.ToString("C")</td>
+                        <td class="acciones">
+                            <button class="btn-editar" @onclick="() => AbrirModalEditarServicio(servicio)">Editar</button>
+                            <button class="btn-eliminar" @onclick="() => EliminarServicio(servicio.IdServicio)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- Modal para agregar/editar servicio -->
+        @if (mostrarModalServicio)
+        {
+            <div class="modal-backdrop">
+                <div class="modal-content">
+                    <h3>@(servicioSeleccionado.IdServicio == 0 ? "Agregar Servicio" : "Editar Servicio")</h3>
+                    <EditForm Model="@servicioSeleccionado" OnValidSubmit="GuardarServicio">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group">
+                            <label>Tipo de Servicio:</label>
+                            <InputText @bind-Value="servicioSeleccionado.TipoServicio" class="form-control" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Precio:</label>
+                            <InputNumber @bind-Value="servicioSeleccionado.Precio" class="form-control" />
+                        </div>
+
+                        <button type="submit" class="btn-guardar">Guardar</button>
+                        <button type="button" class="btn-cerrar" @onclick="CerrarModalServicio">Cerrar</button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    }
+}
+else
+{
+    <p>No tienes permiso para acceder a esta página.</p>
+}
+
+@code {
+    private List<Servicio> servicios = new();
+    private Servicio servicioSeleccionado = new();
+    private bool mostrarModalServicio = false;
+    private string busqueda = string.Empty;
+    private bool usuarioEsAdmin = false;
+    private bool cargando = true;
+    private bool errorCargando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Verificar si el usuario está autenticado y tiene el rol de Admin
+            if (UserStateService.UserId.HasValue)
+            {
+                var rolUsuario = await UsuarioService.ObtenerRolUsuarioAsync(UserStateService.UserId.Value);
+                usuarioEsAdmin = rolUsuario == TipoRolEnum.Admin; // Verificar si el rol es "Admin"
+
+                if (!usuarioEsAdmin)
+                {
+                    // Redirigir a la página de inicio si no es Admin
+                    Navigation.NavigateTo("/");
+                    return;
+                }
+
+                // Cargar la lista de servicios si el usuario es Admin
+                await CargarServicios();
+            }
+            else
+            {
+                // Redirigir a la página de inicio de sesión si no está autenticado
+                Navigation.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorCargando = true;
+            Console.Error.WriteLine($"Error al inicializar la página: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarServicios()
+    {
+        try
+        {
+            servicios = await ServicioService.ObtenerServiciosAsync();
+        }
+        catch (Exception ex)
+        {
+            errorCargando = true;
+            Console.Error.WriteLine($"Error al cargar los servicios: {ex.Message}");
+        }
+    }
+
+    private async Task BuscarServicios()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(busqueda))
+            {
+                servicios = await ServicioService.BuscarServiciosAsync(busqueda);
+            }
+            else
+            {
+                await CargarServicios();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorCargando = true;
+            Console.Error.WriteLine($"Error al buscar servicios: {ex.Message}");
+        }
+    }
+
+    private void AbrirModalAgregarServicio()
+    {
+        servicioSeleccionado = new Servicio();
+        mostrarModalServicio = true;
+    }
+
+    private void AbrirModalEditarServicio(Servicio servicio)
+    {
+        servicioSeleccionado = servicio;
+        mostrarModalServicio = true;
+    }
+
+    private void CerrarModalServicio()
+    {
+        mostrarModalServicio = false;
+    }
+
+    private async Task GuardarServicio()
+    {
+        try
+        {
+            if (servicioSeleccionado.IdServicio == 0)
+            {
+                // Agregar nuevo servicio (el IdUsuario se asigna automáticamente en el servicio)
+                await ServicioService.CrearServicioAsync(servicioSeleccionado);
+            }
+            else
+            {
+                // Editar servicio existente
+                await ServicioService.EditarServicioAsync(servicioSeleccionado);
+            }
+
+            // Recargar la lista de servicios
+            await CargarServicios();
+            mostrarModalServicio = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error al guardar el servicio: {ex.Message}");
+        }
+    }
+
+    private async Task EliminarServicio(int idServicio)
+    {
+        try
+        {
+            await ServicioService.EliminarServicioAsync(idServicio);
+            await CargarServicios();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error al eliminar el servicio: {ex.Message}");
+        }
+    }
+}

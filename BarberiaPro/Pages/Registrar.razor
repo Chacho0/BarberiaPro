@@ -1,0 +1,56 @@
+﻿@page "/registro"
+@layout VacioLayout
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+
+<h3>Registro de Usuario</h3>
+
+<div class="registro-container">
+    <input type="text" placeholder="Nombre" @bind="nombre" />
+    <input type="email" placeholder="Correo" @bind="correo" />
+    <input type="password" placeholder="Contraseña" @bind="password" />
+    <button @onclick="RegistrarUsuario">Registrar</button>
+    <button @onclick="IrALogin" class="btn-login">Volver al Login</button>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error-message">@errorMessage</div>
+    }
+</div>
+
+@code {
+    private string nombre = string.Empty;
+    private string correo = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+
+    private async Task RegistrarUsuario()
+    {
+        errorMessage = string.Empty;
+
+        var nuevoUsuario = new Usuario
+            {
+                Nombre = nombre,
+                Correo = correo,
+                PassWord = password,
+                RolId = 2 // Asignar un rol por defecto (por ejemplo, 2 para "Usuario")
+            };
+
+        var result = await AuthService.RegistrarUsuarioAsync(nuevoUsuario);
+
+        if (result.Success)
+        {
+            Navigation.NavigateTo("/"); // Redirigir al login después del registro
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private void IrALogin()
+    {
+        Navigation.NavigateTo("/"); // Redirigir a la página de login
+    }
+}

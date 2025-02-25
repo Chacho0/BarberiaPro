@@ -14,7 +14,7 @@
         public int IdEmpleado { get; set; }
         public Empleado? Empleado { get; set; }
         public int IdServicio { get; set; }
-        public Servicio? Servicio { get; set; }
+        public Servicio? Servicio { get; set; } = null!;
     }
 
 }

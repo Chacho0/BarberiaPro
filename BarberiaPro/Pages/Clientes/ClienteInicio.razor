@@ -1,0 +1,109 @@
+﻿@page "/cliente-inicio"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject NavigationManager Navigation
+@inject UserStateService UserStateService
+
+<h3>Bienvenido, Cliente</h3>
+
+<!-- Listado de empleados activos -->
+<div class="empleados-container">
+    @foreach (var empleado in empleados)
+    {
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">@empleado.Nombre @empleado.Apellido</h5>
+                <p class="card-text">Cargo: @empleado.Cargo?.DescripcionCargo</p>
+                <p class="card-text">Teléfono: @empleado.Telefono</p>
+                <button class="btn btn-primary" @onclick="() => AbrirModalCita(empleado)">Agendar Cita</button>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal para agendar cita -->
+@if (mostrarModalCita)
+{
+    <div class="modal-backdrop">
+        <div class="modal-content">
+            <h3>Agendar Cita con @empleadoSeleccionado?.Nombre @empleadoSeleccionado?.Apellido</h3>
+            <EditForm Model="@nuevaCita" OnValidSubmit="GuardarCita">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <InputDate @bind-Value="nuevaCita.Fecha" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label>Hora:</label>
+                    <!-- Modal para agendar cita    <InputTime -Value="nuevaCita.Hora" class="form-control" /> -->
+                </div>
+
+                <div class="form-group">
+                    <label>Servicios:</label>
+                    @foreach (var servicio in servicios)
+                    {
+                        <div>
+                            <input type="checkbox" @bind="serviciosSeleccionados" value="@servicio.IdServicio" />
+                            <label>@servicio.TipoServicio - @servicio.Precio.ToString("C")</label>
+                        </div>
+                    }
+                </div>
+
+                <button type="submit" class="btn-guardar">Guardar Cita</button>
+                <button type="button" class="btn-cerrar" @onclick="CerrarModalCita">Cerrar</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Empleado> empleados = new();
+    private List<Servicio> servicios = new();
+    private List<int> serviciosSeleccionados = new();
+    private Empleado? empleadoSeleccionado;
+    private Cita nuevaCita = new();
+    private bool mostrarModalCita = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener empleados activos y servicios al inicializar la página
+        empleados = await CitaService.ObtenerEmpleadosActivosAsync();
+        servicios = await CitaService.ObtenerServiciosAsync();
+    }
+
+    private void AbrirModalCita(Empleado empleado)
+    {
+        empleadoSeleccionado = empleado;
+        nuevaCita = new Cita
+        {
+            IdEmpleado = empleado.IdEmpleado,
+            IdUsuario = UserStateService.UserId.Value // Asignar el ID del usuario autenticado
+        };
+        mostrarModalCita = true;
+    }
+
+    private void CerrarModalCita()
+    {
+        mostrarModalCita = false;
+    }
+
+    private async Task GuardarCita()
+    {
+        // Guardar la cita
+        await CitaService.CrearCitaAsync(nuevaCita);
+
+        // Asignar los servicios seleccionados a la cita
+        if (serviciosSeleccionados.Any())
+        {
+            // await CitaService.AsignarServiciosACitaAsync(nuevaCita.IdCita, serviciosSeleccionados);
+        }
+
+        // Cerrar el modal y recargar la página
+        mostrarModalCita = false;
+        Navigation.NavigateTo("/cliente-inicio", forceLoad: true);
+    }
+}

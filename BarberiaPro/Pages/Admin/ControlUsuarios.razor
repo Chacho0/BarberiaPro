@@ -1,10 +1,12 @@
 ﻿@page "/control-usuarios"
 @using BarberiaPro.Models
 @using BarberiaPro.Services
+@using Microsoft.EntityFrameworkCore
 @inject UsuarioService UsuarioService
 @inject EmpleadoService EmpleadoService
 @inject CargoService CargoService
 @inject NavigationManager Navigation
+@inject UserStateService UserStateService
 
 <h3>Control de Usuarios</h3>
 
@@ -41,11 +43,11 @@
                 </td>
                 <td>
                     <button class="btn btn-warning" @onclick="() => AbrirModalEditarUsuario(usuario)">Editar</button>
-                    <button class="btn btn-danger" @onclick="() => EliminarUsuario(usuario.IdUsuario)">Eliminar</button>
+                    <button class="btn btn-danger" @onclick="() => ConfirmarEliminarUsuario(usuario.IdUsuario)">Eliminar</button>
                     @if (usuario.Rol?.TipoRol == "Empleado" && usuario.Empleado != null)
                     {
                         <button class="btn @(usuario.Empleado.Estado ? "btn-secondary" : "btn-success")"
-                                @onclick="() => CambiarEstadoEmpleado(usuario.Empleado.IdEmpleado, !usuario.Empleado.Estado)">
+                        @onclick="() => CambiarEstadoEmpleado(usuario.Empleado.IdEmpleado, !usuario.Empleado.Estado)">
                             @(usuario.Empleado.Estado ? "Desactivar" : "Activar")
                         </button>
                     }
@@ -82,47 +84,47 @@
 
                 <div class="form-group">
                     <label>Rol:</label>
-                    <select @bind="usuarioSeleccionado.RolId" class="form-control">
+                    <select @bind="usuarioSeleccionado.RolId" @bind:event="onchange" class="form-control">
                         <option value="1">Admin</option>
-                        <option value="2">Empleado</option>
-                        <option value="3">Cliente</option>
+                        <option value="3">Empleado</option>
+                        <option value="2">Cliente</option>
                     </select>
                 </div>
 
-                @if (usuarioSeleccionado.RolId == 2) // Si el rol es Empleado
+@if (usuarioSeleccionado.RolId == 3 && usuarioSeleccionado.Empleado != null)
+{
+    <div class="form-group">
+        <label>Nombre del Empleado:</label>
+        <InputText @bind-Value="usuarioSeleccionado.Empleado.Nombre" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Apellido del Empleado:</label>
+        <InputText @bind-Value="usuarioSeleccionado.Empleado.Apellido" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Teléfono del Empleado:</label>
+        <InputText @bind-Value="usuarioSeleccionado.Empleado.Telefono" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Cargo del Empleado:</label>
+        <div class="input-group">
+            <select @bind="usuarioSeleccionado.Empleado.IdCargo" class="form-control">
+                @foreach (var cargo in cargos)
                 {
-                    <div class="form-group">
-                        <label>Nombre del Empleado:</label>
-                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Nombre" class="form-control" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Apellido del Empleado:</label>
-                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Apellido" class="form-control" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Teléfono del Empleado:</label>
-                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Telefono" class="form-control" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Cargo del Empleado:</label>
-                        <div class="input-group">
-                            <select @bind="usuarioSeleccionado.Empleado.IdCargo" class="form-control">
-                                @foreach (var cargo in cargos)
-                                {
-                                    <option value="@cargo.IdCargo">@cargo.DescripcionCargo</option>
-                                }
-                            </select>
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" @onclick="AbrirModalAgregarCargo">
-                                    <i class="fas fa-plus"></i> <!-- Icono de agregar -->
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <option value="@cargo.IdCargo">@cargo.DescripcionCargo</option>
                 }
+            </select>
+            <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" @onclick="AbrirModalAgregarCargo">
+                    <i class="fas fa-plus"></i> <!-- Icono de agregar -->
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
                 <button type="submit" class="btn btn-primary">Guardar</button>
                 <button type="button" class="btn btn-secondary" @onclick="CerrarModalUsuario">Cerrar</button>
@@ -153,6 +155,7 @@
     </div>
 }
 
+
 @code {
     private List<Usuario> usuarios = new();
     private List<Cargo> cargos = new();
@@ -161,27 +164,82 @@
     private bool mostrarModalUsuario = false;
     private bool mostrarModalCargo = false;
     private Usuario? usuarioActual;
+    private bool usuarioEsAdmin = false;
+    private bool cargando = true;
+    private bool errorCargando = false;
+
 
     protected override async Task OnInitializedAsync()
     {
-        // Obtener el usuario actual (para verificar el rol)
-        usuarioActual = await UsuarioService.ObtenerUsuarioActualAsync();
+        try
+        {
+            // Verificar si el usuario está autenticado y tiene el rol de Admin
+            if (UserStateService.UserId.HasValue)
+            {
+                var rolUsuario = await UsuarioService.ObtenerRolUsuarioAsync(UserStateService.UserId.Value);
+                usuarioEsAdmin = rolUsuario == TipoRolEnum.Admin; // Verificar si el rol es "Admin"
 
-        // Cargar la lista de usuarios
-        usuarios = await UsuarioService.ObtenerUsuariosAsync();
+                if (!usuarioEsAdmin)
+                {
+                    // Redirigir a la página de inicio si no es Admin
+                    Navigation.NavigateTo("/");
+                    return;
+                }
+                // Obtener el usuario actual (para verificar el rol)
+                usuarioActual = await UsuarioService.ObtenerUsuarioActualAsync();
 
-        // Cargar la lista de cargos
-        cargos = await CargoService.ObtenerCargosAsync();
+                // Cargar la lista de usuarios
+                usuarios = await UsuarioService.ObtenerUsuariosAsync();
+
+                // Cargar la lista de cargos
+                cargos = await CargoService.ObtenerCargosAsync();
+               
+            }
+            else
+            {
+                // Redirigir a la página de inicio de sesión si no está autenticado
+                Navigation.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorCargando = true;
+            Console.Error.WriteLine($"Error al inicializar la página: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+        }
+       
     }
+    private void OnRolChanged(ChangeEventArgs e)
+    {
+        // Convertir el valor seleccionado a entero
+        usuarioSeleccionado.RolId = int.Parse(e.Value.ToString());
 
+        // Inicializar o eliminar el objeto Empleado según el rol seleccionado
+        if (usuarioSeleccionado.RolId == 3)
+        {
+            usuarioSeleccionado.Empleado = new Empleado();
+        }
+        else
+        {
+            usuarioSeleccionado.Empleado = null;
+        }
+
+        // Forzar la actualización del modal
+        StateHasChanged();
+    }
     private void AbrirModalAgregarUsuario()
     {
         usuarioSeleccionado = new Usuario
             {
-                Empleado = new Empleado() // Inicializar el empleado si es necesario
+            // Inicializar Empleado solo si el rol es "Empleado"
+                Empleado = usuarioSeleccionado.RolId == 3 ? new Empleado() : null
             };
         mostrarModalUsuario = true;
     }
+   
 
     private void AbrirModalEditarUsuario(Usuario usuario)
     {
@@ -193,12 +251,19 @@
     {
         nuevoCargo = new Cargo();
         mostrarModalCargo = true;
+        
     }
 
     private async Task GuardarUsuario()
     {
         if (usuarioSeleccionado.IdUsuario == 0)
         {
+            // Si el rol no es "Empleado", eliminar el objeto Empleado
+            if (usuarioSeleccionado.RolId != 3 && usuarioSeleccionado.Empleado != null)
+            {
+                usuarioSeleccionado.Empleado = null;
+            }
+
             // Agregar nuevo usuario
             await UsuarioService.AgregarUsuarioAsync(usuarioSeleccionado);
         }
@@ -218,6 +283,12 @@
         await CargoService.AgregarCargoAsync(nuevoCargo);
         cargos = await CargoService.ObtenerCargosAsync(); // Recargar la lista de cargos
         mostrarModalCargo = false;
+    }
+    private async Task ConfirmarEliminarUsuario(int idUsuario)
+    {
+
+        await EliminarUsuario(idUsuario);
+
     }
 
     private void CerrarModalUsuario()
