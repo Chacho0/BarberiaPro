@@ -16,6 +16,9 @@ namespace BarberiaPro.Models
 
         // Relación uno a uno con Empleado
         public Empleado? Empleado { get; set; }
+
+        // Relación uno a uno con PerfilCliente
+        public Perfil? PerfilCliente { get; set; }
     }
 
 }

@@ -39,7 +39,7 @@
 
                 <div class="form-group">
                     <label>Hora:</label>
-                    <InputTime -Value="nuevaCita.Hora" class="form-control" /> 
+                    <InputText @bind-Value="nuevaCita.Hora" class="form-control" placeholder="HH:mm" />
                 </div>
 
                 <div class="form-group">
@@ -47,7 +47,7 @@
                     @foreach (var servicio in servicios)
                     {
                         <div>
-                            <input type="checkbox" @bind="serviciosSeleccionados" value="@servicio.IdServicio" />
+                            <input type="checkbox" value="@servicio.IdServicio" @onchange="(e) => SeleccionarServicio(e, servicio.IdServicio)" />
                             <label>@servicio.TipoServicio - @servicio.Precio.ToString("C")</label>
                         </div>
                     }
@@ -63,9 +63,9 @@
 @code {
     private List<Empleado> empleados = new();
     private List<Servicio> servicios = new();
-    private List<int> serviciosSeleccionados = new();
     private Empleado? empleadoSeleccionado;
     private Cita nuevaCita = new();
+    private List<int> serviciosSeleccionados = new();
     private bool mostrarModalCita = false;
 
     protected override async Task OnInitializedAsync()
@@ -79,10 +79,11 @@
     {
         empleadoSeleccionado = empleado;
         nuevaCita = new Cita
-        {
-            IdEmpleado = empleado.IdEmpleado,
-            IdUsuario = UserStateService.UserId.Value // Asignar el ID del usuario autenticado
-        };
+            {
+                IdEmpleado = empleado.IdEmpleado,
+                IdUsuario = UserStateService.UserId.Value // Asignar el ID del usuario autenticado
+            };
+        serviciosSeleccionados.Clear(); // Limpiar selección previa
         mostrarModalCita = true;
     }
 
@@ -91,16 +92,31 @@
         mostrarModalCita = false;
     }
 
+    private void SeleccionarServicio(ChangeEventArgs e, int idServicio)
+    {
+        var isChecked = (bool)e.Value;
+        if (isChecked)
+        {
+            serviciosSeleccionados.Add(idServicio);
+        }
+        else
+        {
+            serviciosSeleccionados.Remove(idServicio);
+        }
+    }
+
     private async Task GuardarCita()
     {
-        // Guardar la cita
-        await CitaService.CrearCitaAsync(nuevaCita);
-
-        // Asignar los servicios seleccionados a la cita
-        if (serviciosSeleccionados.Any())
+        // Validar la hora antes de guardar
+        if (!TimeSpan.TryParse(nuevaCita.Hora, out _))
         {
-             await CitaService.AsignarServiciosACitaAsync(nuevaCita.IdCita, serviciosSeleccionados);
+            // Mostrar un mensaje de error si la hora no es válida
+            Console.Error.WriteLine("Formato de hora inválido. Use el formato HH:mm.");
+            return;
         }
+
+        // Guardar la cita con los servicios seleccionados
+        await CitaService.CrearCitaAsync(nuevaCita, serviciosSeleccionados);
 
         // Cerrar el modal y recargar la página
         mostrarModalCita = false;

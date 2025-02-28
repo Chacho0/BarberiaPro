@@ -1,0 +1,85 @@
+﻿@page "/perfil-cliente"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject UserStateService UserStateService
+@inject PerfilClienteService PerfilClienteService
+@inject NavigationManager Navigation
+
+<h3>Perfil del Cliente</h3>
+
+<EditForm Model="@perfilCliente" OnValidSubmit="GuardarPerfil">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Datos del Usuario -->
+    <div class="form-group">
+        <label>Nombre:</label>
+        <InputText @bind-Value="perfilCliente.Usuario.Nombre" class="form-control" readonly />
+    </div>
+
+    <div class="form-group">
+        <label>Correo:</label>
+        <InputText @bind-Value="perfilCliente.Usuario.Correo" class="form-control" readonly />
+    </div>
+
+    <!-- Datos del PerfilCliente -->
+    <div class="form-group">
+        <label>Dirección:</label>
+        <InputText @bind-Value="perfilCliente.Direccion" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Teléfono:</label>
+        <InputText @bind-Value="perfilCliente.Telefono" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Foto:</label>
+        <InputText @bind-Value="perfilCliente.Foto" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+</EditForm>
+
+@code {
+    private Perfil perfilCliente = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = UserStateService.UserId;
+        if (userId.HasValue)
+        {
+            perfilCliente = await PerfilClienteService.ObtenerPerfilClienteAsync(userId.Value);
+
+            if (perfilCliente == null)
+            {
+                perfilCliente = new Perfil
+                    {
+                        IdUsuario = userId.Value,
+                        Usuario = new Usuario
+                        {
+                            IdUsuario = userId.Value,
+                            Nombre = "Fulano",
+                            Correo = "cliente@.com"
+                        }
+                    };
+            }
+        }
+        else
+        {
+            perfilCliente = new Perfil
+                {
+                    Usuario = new Usuario()
+                };
+        }
+    }
+
+    
+
+    private async Task GuardarPerfil()
+    {
+        await PerfilClienteService.GuardarPerfilClienteAsync(perfilCliente);
+        Console.WriteLine("Perfil guardado correctamente.");
+        Navigation.NavigateTo("/");
+    }
+}

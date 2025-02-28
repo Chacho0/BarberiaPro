@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BarberiaPro.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250224204641_Resultadoune")]
-    partial class Resultadoune
+    [Migration("20250228195050_services2")]
+    partial class services2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,13 +57,11 @@ namespace BarberiaPro.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
-                    b.Property<TimeSpan>("Hora")
-                        .HasColumnType("time");
+                    b.Property<string>("Hora")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("IdEmpleado")
-                        .HasColumnType("int");
-
-                    b.Property<int>("IdServicio")
                         .HasColumnType("int");
 
                     b.Property<int>("IdUsuario")
@@ -72,8 +70,6 @@ namespace BarberiaPro.Migrations
                     b.HasKey("IdCita");
 
                     b.HasIndex("IdEmpleado");
-
-                    b.HasIndex("IdServicio");
 
                     b.HasIndex("IdUsuario");
 
@@ -102,6 +98,21 @@ namespace BarberiaPro.Migrations
                     b.HasIndex("IdCita");
 
                     b.ToTable("CitasProcesadas");
+                });
+
+            modelBuilder.Entity("BarberiaPro.Models.CitaServicio", b =>
+                {
+                    b.Property<int>("IdCita")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdServicio")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdCita", "IdServicio");
+
+                    b.HasIndex("IdServicio");
+
+                    b.ToTable("CitaServicios");
                 });
 
             modelBuilder.Entity("BarberiaPro.Models.Empleado", b =>
@@ -164,6 +175,37 @@ namespace BarberiaPro.Migrations
                     b.HasIndex("IdUsuario");
 
                     b.ToTable("HistoriasClientes");
+                });
+
+            modelBuilder.Entity("BarberiaPro.Models.Perfil", b =>
+                {
+                    b.Property<int>("IdPerfil")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPerfil"));
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Foto")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("IdPerfil");
+
+                    b.HasIndex("IdUsuario")
+                        .IsUnique();
+
+                    b.ToTable("perfilCliente");
                 });
 
             modelBuilder.Entity("BarberiaPro.Models.Rol", b =>
@@ -278,12 +320,6 @@ namespace BarberiaPro.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BarberiaPro.Models.Servicio", "Servicio")
-                        .WithMany()
-                        .HasForeignKey("IdServicio")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("BarberiaPro.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("IdUsuario")
@@ -291,8 +327,6 @@ namespace BarberiaPro.Migrations
                         .IsRequired();
 
                     b.Navigation("Empleado");
-
-                    b.Navigation("Servicio");
 
                     b.Navigation("Usuario");
                 });
@@ -306,6 +340,25 @@ namespace BarberiaPro.Migrations
                         .IsRequired();
 
                     b.Navigation("Cita");
+                });
+
+            modelBuilder.Entity("BarberiaPro.Models.CitaServicio", b =>
+                {
+                    b.HasOne("BarberiaPro.Models.Cita", "Cita")
+                        .WithMany("CitaServicios")
+                        .HasForeignKey("IdCita")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BarberiaPro.Models.Servicio", "Servicio")
+                        .WithMany("CitaServicios")
+                        .HasForeignKey("IdServicio")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Servicio");
                 });
 
             modelBuilder.Entity("BarberiaPro.Models.Empleado", b =>
@@ -346,6 +399,17 @@ namespace BarberiaPro.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("BarberiaPro.Models.Perfil", b =>
+                {
+                    b.HasOne("BarberiaPro.Models.Usuario", "Usuario")
+                        .WithOne("PerfilCliente")
+                        .HasForeignKey("BarberiaPro.Models.Perfil", "IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("BarberiaPro.Models.Servicio", b =>
                 {
                     b.HasOne("BarberiaPro.Models.Usuario", "Usuario")
@@ -372,14 +436,26 @@ namespace BarberiaPro.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("BarberiaPro.Models.Cita", b =>
+                {
+                    b.Navigation("CitaServicios");
+                });
+
             modelBuilder.Entity("BarberiaPro.Models.Rol", b =>
                 {
                     b.Navigation("Usuarios");
                 });
 
+            modelBuilder.Entity("BarberiaPro.Models.Servicio", b =>
+                {
+                    b.Navigation("CitaServicios");
+                });
+
             modelBuilder.Entity("BarberiaPro.Models.Usuario", b =>
                 {
                     b.Navigation("Empleado");
+
+                    b.Navigation("PerfilCliente");
                 });
 #pragma warning restore 612, 618
         }

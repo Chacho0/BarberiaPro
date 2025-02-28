@@ -18,6 +18,7 @@ builder.Services.AddScoped<UserStateService>();
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<ServicioService>();
+builder.Services.AddScoped<PerfilClienteService>();
 builder.Services.AddScoped<EmpleadoService>();
 builder.Services.AddScoped<CargoService>();
 builder.Services.AddHttpContextAccessor();

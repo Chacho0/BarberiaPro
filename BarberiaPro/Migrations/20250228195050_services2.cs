@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BarberiaPro.Migrations
 {
     /// <inheritdoc />
-    public partial class Resultadoune : Migration
+    public partial class services2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -98,6 +98,28 @@ namespace BarberiaPro.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "perfilCliente",
+                columns: table => new
+                {
+                    IdPerfil = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Direccion = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Telefono = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Foto = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IdUsuario = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_perfilCliente", x => x.IdPerfil);
+                    table.ForeignKey(
+                        name: "FK_perfilCliente_Usuarios_IdUsuario",
+                        column: x => x.IdUsuario,
+                        principalTable: "Usuarios",
+                        principalColumn: "IdUsuario",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Servicios",
                 columns: table => new
                 {
@@ -125,11 +147,10 @@ namespace BarberiaPro.Migrations
                     IdCita = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Hora = table.Column<TimeSpan>(type: "time", nullable: false),
+                    Hora = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IdUsuario = table.Column<int>(type: "int", nullable: false),
-                    IdEmpleado = table.Column<int>(type: "int", nullable: false),
-                    IdServicio = table.Column<int>(type: "int", nullable: false)
+                    IdEmpleado = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -141,17 +162,35 @@ namespace BarberiaPro.Migrations
                         principalColumn: "IdEmpleado",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Citas_Servicios_IdServicio",
-                        column: x => x.IdServicio,
-                        principalTable: "Servicios",
-                        principalColumn: "IdServicio",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_Citas_Usuarios_IdUsuario",
                         column: x => x.IdUsuario,
                         principalTable: "Usuarios",
                         principalColumn: "IdUsuario",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CitaServicios",
+                columns: table => new
+                {
+                    IdCita = table.Column<int>(type: "int", nullable: false),
+                    IdServicio = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CitaServicios", x => new { x.IdCita, x.IdServicio });
+                    table.ForeignKey(
+                        name: "FK_CitaServicios_Citas_IdCita",
+                        column: x => x.IdCita,
+                        principalTable: "Citas",
+                        principalColumn: "IdCita",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CitaServicios_Servicios_IdServicio",
+                        column: x => x.IdServicio,
+                        principalTable: "Servicios",
+                        principalColumn: "IdServicio",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -222,14 +261,14 @@ namespace BarberiaPro.Migrations
                 column: "IdEmpleado");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Citas_IdServicio",
-                table: "Citas",
-                column: "IdServicio");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Citas_IdUsuario",
                 table: "Citas",
                 column: "IdUsuario");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CitaServicios_IdServicio",
+                table: "CitaServicios",
+                column: "IdServicio");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CitasProcesadas_IdCita",
@@ -258,6 +297,12 @@ namespace BarberiaPro.Migrations
                 column: "IdUsuario");
 
             migrationBuilder.CreateIndex(
+                name: "IX_perfilCliente_IdUsuario",
+                table: "perfilCliente",
+                column: "IdUsuario",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Servicios_IdUsuario",
                 table: "Servicios",
                 column: "IdUsuario");
@@ -277,7 +322,16 @@ namespace BarberiaPro.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "CitaServicios");
+
+            migrationBuilder.DropTable(
                 name: "HistoriasClientes");
+
+            migrationBuilder.DropTable(
+                name: "perfilCliente");
+
+            migrationBuilder.DropTable(
+                name: "Servicios");
 
             migrationBuilder.DropTable(
                 name: "CitasProcesadas");
@@ -287,9 +341,6 @@ namespace BarberiaPro.Migrations
 
             migrationBuilder.DropTable(
                 name: "Empleados");
-
-            migrationBuilder.DropTable(
-                name: "Servicios");
 
             migrationBuilder.DropTable(
                 name: "Cargos");

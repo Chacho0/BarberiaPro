@@ -1,7 +1,5 @@
 ﻿@using BarberiaPro.Models
 @using BarberiaPro.Services
-@using global::BarberiaPro.Models
-@using global::BarberiaPro.Services
 @inject UserStateService UserStateService
 @inject UsuarioService UsuarioService
 <div class="top-row ps-3 navbar navbar-dark">
@@ -37,31 +35,38 @@
                 </NavLink>
             </div>
         }
-
-        <!-- Mostrar enlace para todos los usuarios -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+        <!-- Mostrar enlace solo si el usuario es Admin -->
+        @if (TieneAcceso(TipoRolEnum.Admin))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="aprobar-citas">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Solicitudes de Citas
+                </NavLink>
+            </div>
+        }
+        @if(TieneAcceso(TipoRolEnum.Cliente)){
+            
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="cliente-inicio">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
+                <span class="oi oi-plus" aria-hidden="true"></span> Solicitar Citas
             </NavLink>
         </div>
 
-        <!-- Mostrar enlace para todos los usuarios -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
-            </NavLink>
-        </div>
+        } @if(TieneAcceso(TipoRolEnum.Cliente)){
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="perfil-cliente">
+                    <span class="oi oi-person" aria-hidden="true"></span> Perfil
+                </NavLink>
+            </div>
+
+        }
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-    private TipoRolEn   um? rolUsuario;
+    private TipoRolEnum? rolUsuario;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
