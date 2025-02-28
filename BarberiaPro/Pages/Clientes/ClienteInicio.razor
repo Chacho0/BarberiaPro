@@ -39,7 +39,7 @@
 
                 <div class="form-group">
                     <label>Hora:</label>
-                    <!-- Modal para agendar cita    <InputTime -Value="nuevaCita.Hora" class="form-control" /> -->
+                    <InputTime -Value="nuevaCita.Hora" class="form-control" /> 
                 </div>
 
                 <div class="form-group">
@@ -99,7 +99,7 @@
         // Asignar los servicios seleccionados a la cita
         if (serviciosSeleccionados.Any())
         {
-            // await CitaService.AsignarServiciosACitaAsync(nuevaCita.IdCita, serviciosSeleccionados);
+             await CitaService.AsignarServiciosACitaAsync(nuevaCita.IdCita, serviciosSeleccionados);
         }
 
         // Cerrar el modal y recargar la página
