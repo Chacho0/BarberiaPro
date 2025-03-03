@@ -20,27 +20,19 @@ namespace BarberiaPro.Services
                 .Include(p => p.Usuario)
                 .FirstOrDefaultAsync(p => p.IdUsuario == idUsuario) ?? new Perfil();
         }
-      
 
-        public async Task GuardarPerfilClienteAsync(Perfil perfilCliente)
+
+        public async Task GuardarPerfilClienteAsync(Perfil perfil)
         {
             using var context = _dbContextFactory.CreateDbContext();
-
-            var perfilExistente = await context.perfilCliente
-                .FirstOrDefaultAsync(p => p.IdPerfil == perfilCliente.IdPerfil);
-
-            if (perfilExistente != null)
+            if (perfil.IdPerfil == 0)
             {
-                perfilExistente.Direccion = perfilCliente.Direccion;
-                perfilExistente.Telefono = perfilCliente.Telefono;
-                perfilExistente.Foto = perfilCliente.Foto;
-                context.perfilCliente.Update(perfilExistente);
+                context.perfilCliente.Add(perfil);
             }
             else
             {
-                context.perfilCliente.Add(perfilCliente);
+                context.perfilCliente.Update(perfil);
             }
-
             await context.SaveChangesAsync();
         }
     }
