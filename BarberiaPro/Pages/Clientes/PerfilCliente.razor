@@ -3,83 +3,193 @@
 @using BarberiaPro.Services
 @inject UserStateService UserStateService
 @inject PerfilClienteService PerfilClienteService
+@inject UsuarioService UsuarioService
+@inject IJSRuntime Runtime
 @inject NavigationManager Navigation
+
+@inject IWebHostEnvironment Environment
 
 <h3>Perfil del Cliente</h3>
 
-<EditForm Model="@perfilCliente" OnValidSubmit="GuardarPerfil">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@if (perfilCliente != null && perfilCliente.Usuario != null)
+{
+    <EditForm Model="@perfilCliente" OnValidSubmit="GuardarPerfil">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="form-group">
+            <label>Foto:</label>
+            <div class="circular-image-container">
+                <img src="@fotoPerfil" alt="Foto de Perfil" class="circular-image" @onclick="CargarImagen" style="cursor: pointer;" />
+            </div>
+            <InputFile id="fileInput" OnChange="CargarImagenSeleccionada" hidden />
+        </div>
+        <!-- Datos del Usuario (Solo lectura) -->
+        <div class="form-group">
+            <label>Nombre:</label>
+            <InputText @bind-Value="perfilCliente.Usuario.Nombre" class="form-control" readonly />
+        </div>
 
-    <!-- Datos del Usuario -->
-    <div class="form-group">
-        <label>Nombre:</label>
-        <InputText @bind-Value="perfilCliente.Usuario.Nombre" class="form-control" readonly />
-    </div>
+        <div class="form-group">
+            <label>Correo:</label>
+            <InputText @bind-Value="perfilCliente.Usuario.Correo" class="form-control" readonly />
+        </div>
 
-    <div class="form-group">
-        <label>Correo:</label>
-        <InputText @bind-Value="perfilCliente.Usuario.Correo" class="form-control" readonly />
-    </div>
+        <!-- Datos del PerfilCliente (Editables) -->
+        <div class="form-group">
+            <label>Dirección:</label>
+            <InputText @bind-Value="perfilCliente.Direccion" class="form-control" />
+        </div>
 
-    <!-- Datos del PerfilCliente -->
-    <div class="form-group">
-        <label>Dirección:</label>
-        <InputText @bind-Value="perfilCliente.Direccion" class="form-control" />
-    </div>
+        <div class="form-group">
+            <label>Teléfono:</label>
+            <InputText @bind-Value="perfilCliente.Telefono" class="form-control" />
+        </div>
 
-    <div class="form-group">
-        <label>Teléfono:</label>
-        <InputText @bind-Value="perfilCliente.Telefono" class="form-control" />
-    </div>
 
-    <div class="form-group">
-        <label>Foto:</label>
-        <InputText @bind-Value="perfilCliente.Foto" class="form-control" />
-    </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </EditForm>
+}
+else
+{
+    <h3>Crear Perfil del Cliente</h3>
+    <EditForm Model="@perfilCliente" OnValidSubmit="GuardarPerfil">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-</EditForm>
+        <div class="form-group">
+            <label>Foto:</label>
+            <div class="circular-image-container">
+                <img src="@fotoPerfil" alt="Foto de Perfil" class="circular-image" @onclick="CargarImagen" style="cursor: pointer;" />
+            </div>
+            <InputFile id="fileInput" OnChange="CargarImagenSeleccionada" hidden />
+        </div>
+        <!-- Datos del PerfilCliente (Editables) -->
+        <div class="form-group">
+            <label>Dirección:</label>
+            <InputText @bind-Value="perfilCliente.Direccion" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label>Teléfono:</label>
+            <InputText @bind-Value="perfilCliente.Telefono" class="form-control" />
+        </div>
+
+
+        <button type="submit" class="btn btn-primary">Crear Perfil</button>
+    </EditForm>
+}
 
 @code {
-    private Perfil perfilCliente = new();
+    private Perfil perfilCliente = new Perfil();
+    private string fotoPerfil = "/Perfiles/Default.jpg"; // Imagen por defecto
+    [Inject]
+    private IWebHostEnvironment _webHostEnvironment { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = UserStateService.UserId;
-        if (userId.HasValue)
+        if (UserStateService.UserId.HasValue)
         {
-            perfilCliente = await PerfilClienteService.ObtenerPerfilClienteAsync(userId.Value);
+            var userId = UserStateService.UserId.Value;
+            perfilCliente = await PerfilClienteService.ObtenerPerfilClienteAsync(userId);
 
             if (perfilCliente == null)
             {
-                perfilCliente = new Perfil
-                    {
-                        IdUsuario = userId.Value,
-                        Usuario = new Usuario
+                var usuario = await UsuarioService.GetUsuarioAsync(userId);
+
+                if (usuario != null)
+                {
+                    perfilCliente = new Perfil
                         {
-                            IdUsuario = userId.Value,
-                            Nombre = "Fulano",
-                            Correo = "cliente@.com"
-                        }
-                    };
+                            IdUsuario = userId,
+                            Usuario = usuario
+                        };
+                }
+                else
+                {
+                    Console.WriteLine($"No se encontró el usuario con Id: {userId}");
+                    Navigation.NavigateTo("/error");
+                    return;
+                }
+            }
+            else
+            {
+                // Si ya existe una foto de perfil, la cargamos
+                if (!string.IsNullOrEmpty(perfilCliente.Foto))
+                {
+                    fotoPerfil = perfilCliente.Foto;
+                }
             }
         }
         else
         {
             perfilCliente = new Perfil
                 {
-                    Usuario = new Usuario()
+                    Usuario = new Usuario
+                    {
+                        Nombre = "Invitado",
+                        Correo = "invitado@ejemplo.com"
+                    }
                 };
         }
     }
 
-    
+    private void CargarImagen()
+    {
+        // Simula un click en el input de tipo file
+        Runtime.InvokeVoidAsync("eval", "document.getElementById('fileInput').click();");
+    }
+
+    private async Task CargarImagenSeleccionada(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file != null)
+        {
+            // Generar un nombre único para el archivo
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.Name);
+            var path = Path.Combine(_webHostEnvironment.WebRootPath, "Perfiles", fileName);
+
+            try
+            {
+                // Crear el directorio "Perfiles" si no existe
+                Directory.CreateDirectory(Path.Combine(_webHostEnvironment.WebRootPath, "Perfiles"));
+
+                // Copiar el archivo al directorio "Perfiles"
+                using (var stream = new FileStream(path, FileMode.Create))
+                {
+                    await file.OpenReadStream().CopyToAsync(stream);
+                }
+
+                // Actualizar la ruta de la foto de perfil
+                fotoPerfil = "/Perfiles/" + fileName;
+                perfilCliente.Foto = fotoPerfil; //Guardar en la propiedad del modelo
+                StateHasChanged(); // Forzar la actualización de la UI
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar la imagen: {ex.Message}");
+                //TODO: mostrar mensaje de error al usuario
+            }
+        }
+    }
+
 
     private async Task GuardarPerfil()
     {
-        await PerfilClienteService.GuardarPerfilClienteAsync(perfilCliente);
+        if (perfilCliente.IdPerfil == 0)
+        {
+            if (UserStateService.UserId.HasValue)
+            {
+                perfilCliente.IdUsuario = UserStateService.UserId.Value;
+            }
+            await PerfilClienteService.GuardarPerfilClienteAsync(perfilCliente);
+        }
+        else
+        {
+            await PerfilClienteService.GuardarPerfilClienteAsync(perfilCliente);
+        }
+
         Console.WriteLine("Perfil guardado correctamente.");
-        Navigation.NavigateTo("/");
+       
     }
-}
+}  

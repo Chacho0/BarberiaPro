@@ -1,16 +1,80 @@
-﻿.citas-container {
+﻿/* Estilos generales para la página */
+.aprobar-citas-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+    background-color: #f8f9fa;
+    color: #343a40;
+}
+
+    .aprobar-citas-container h2 {
+        color: #007bff;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+.cliente-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.cliente-foto {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+/* Estilos para el contenedor de citas pendientes */
+.citas-pendientes {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 20px;
+    justify-content: center;
 }
 
-.card {
-    width: 18rem;
-    border: 1px solid #ccc;
+/* Estilos para cada tarjeta de cita */
+.cita-card {
+    background-color: #fff;
     border-radius: 10px;
-    padding: 1rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px;
+    transition: transform 0.3s ease;
 }
 
+    .cita-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .cita-card h4 {
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+
+    .cita-card p {
+        margin-bottom: 5px;
+    }
+
+.cita-acciones {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.btn-aprobar {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+    .btn-aprobar:hover {
+        background-color: #218838;
+    }
+
+/* Estilos para el modal */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -21,21 +85,90 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 1000;
 }
 
 .modal-content {
     background-color: white;
-    padding: 2rem;
+    padding: 30px;
     border-radius: 10px;
-    width: 50%;
+    width: 600px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+    .modal-content h3 {
+        color: #007bff;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .modal-content .form-group {
+        margin-bottom: 20px;
+    }
+
+        .modal-content .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .modal-content .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1em;
+            color: #495057;
+        }
+
+            .modal-content .form-group input:focus {
+                border-color: #80bdff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+                outline: 0;
+            }
+
+.modal-botones {
+    text-align: right;
+    margin-top: 20px; /* Añadido para separar los botones del formulario */
+}
+
+.btn-guardar,
+.btn-cerrar {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    /* Espacio entre los botones */
+    margin-left: 10px;
 }
 
 .btn-guardar {
-    background-color: #28a745;
+    background-color: #28a745; /* Verde */
     color: white;
 }
 
 .btn-cerrar {
-    background-color: #dc3545;
+    background-color: #dc3545; /* Rojo */
     color: white;
 }
+
+.btn-guardar:hover {
+    background-color: #218838; /* Verde más oscuro */
+    transform: translateY(-2px); /* Ligeramente eleva el botón al pasar el ratón */
+}
+
+.btn-cerrar:hover {
+    background-color: #c82333; /* Rojo más oscuro */
+    transform: translateY(-2px);
+}
+
+/* Estilos para cuando los botones están en estado "activo" (ej: al hacer clic) */
+.btn-guardar:active,
+.btn-cerrar:active {
+    transform: translateY(0); /* Elimina el efecto de elevación al hacer clic */
+    box-shadow: none; /* Elimina la sombra al hacer clic */
+}  

@@ -7,3 +7,47 @@
 Welcome to your new app.
 
 <SurveyPrompt Title="How is Blazor working for you?" />
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    async function stripeCheckout(totalPago, idCitaProcesada) {
+        try {
+            // Llamar al backend para crear un PaymentIntent
+            const response = await fetch('/api/pagos/crear-pago', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ Monto: totalPago }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Error al crear el pago');
+            }
+
+            // Redirigir a Stripe Checkout
+            const stripe = Stripe('pk_test_XXXXXXXXXXXXXXXXXXXXXXXX'); // Tu clave pública de Stripe
+            const { error } = await stripe.redirectToCheckout({
+                sessionId: data.clientSecret, // Usar el client_secret
+            });
+
+            if (error) {
+                console.error(error.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
+
+<script>
+    function descargarArchivo(nombreArchivo) {
+        const link = document.createElement('a');
+        link.href = nombreArchivo;
+        link.download = nombreArchivo;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>

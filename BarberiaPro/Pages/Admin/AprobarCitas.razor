@@ -4,52 +4,66 @@
 @inject CitaService CitaService
 @inject NavigationManager Navigation
 
-<h3>Aprobar Citas</h3>
+<div class="aprobar-citas-container">
+    <h2>Aprobar Citas</h2>
 
-<!-- Listado de citas pendientes -->
-<div class="citas-container">
-    @foreach (var cita in citasPendientes)
+    <!-- Listado de citas pendientes -->
+    <div class="citas-pendientes">
+        @if (citasPendientes.Any())
+        {
+            @foreach (var cita in citasPendientes)
+            {
+                <div class="cita-card">
+                    <h4>Cita #@cita.IdCita</h4>
+                    <div class="cliente-info">
+                        <!-- Mostrar la foto del perfil del cliente -->
+                        <img src="@(cita.Usuario?.PerfilCliente?.Foto ?? "Perfiles/Default.jpg")" alt="Foto del Cliente" class="cliente-foto" />
+                        <p><strong>Cliente:</strong> @cita.Usuario?.Nombre</p>
+                    </div>
+                    <p><strong>Empleado:</strong> @cita.Empleado?.Nombre</p>
+                    <p><strong>Fecha:</strong> @cita.Fecha.ToShortDateString()</p>
+                    <p><strong>Hora:</strong> @cita.Hora</p>
+                    <div class="cita-acciones">
+                        <button class="btn-aprobar" @onclick="() => AbrirModalAprobarCita(cita)">Aprobar Cita</button>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p>No hay citas pendientes por el momento.</p>
+        }
+    </div>
+
+    <!-- Modal para aprobar cita -->
+    @if (mostrarModalAprobarCita)
     {
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Cita #@cita.IdCita</h5>
-                <p class="card-text">Cliente: @cita.Usuario?.Nombre</p>
-                <p class="card-text">Empleado: @cita.Empleado?.Nombre</p>
-                <p class="card-text">Fecha: @cita.Fecha.ToShortDateString()</p>
-                <p class="card-text">Hora: @cita.Hora</p>
-                <p class="card-text">Estado: @cita.Estado</p>
-                <button class="btn btn-primary" @onclick="() => AbrirModalAprobarCita(cita)">Aprobar Cita</button>
+        <div class="modal-backdrop">
+            <div class="modal-content">
+                <h3>Aprobar Cita #@citaSeleccionada?.IdCita</h3>
+                <EditForm Model="@citaSeleccionada" OnValidSubmit="AprobarCita">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label>Fecha:</label>
+                        <InputDate @bind-Value="citaSeleccionada.Fecha" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hora:</label>
+                        <InputText @bind-Value="citaSeleccionada.Hora" class="form-control" placeholder="HH:mm" />
+                    </div>
+
+                    <div class="modal-botones">
+                        <button type="submit" class="btn-guardar">Guardar Cambios</button>
+                        <button type="button" class="btn-cerrar" @onclick="CerrarModalAprobarCita">Cerrar</button>
+                    </div>
+                </EditForm>
             </div>
         </div>
     }
 </div>
-
-<!-- Modal para aprobar cita -->
-@if (mostrarModalAprobarCita)
-{
-    <div class="modal-backdrop">
-        <div class="modal-content">
-            <h3>Aprobar Cita #@citaSeleccionada?.IdCita</h3>
-            <EditForm Model="@citaSeleccionada" OnValidSubmit="AprobarCita">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="form-group">
-                    <label>Fecha:</label>
-                    <InputDate @bind-Value="citaSeleccionada.Fecha" class="form-control" />
-                </div>
-
-                <div class="form-group">
-                    <label>Hora:</label>
-                    <InputText @bind-Value="citaSeleccionada.Hora" class="form-control" placeholder="HH:mm:tt" />
-                </div>
-
-                <button type="submit" class="btn-guardar">Guardar Cambios</button>
-                <button type="button" class="btn-cerrar" @onclick="CerrarModalAprobarCita">Cerrar</button>
-            </EditForm>
-        </div>
-    </div>
-}
 
 @code {
     private List<Cita> citasPendientes = new();
@@ -90,9 +104,32 @@
             // Actualizar la cita en la base de datos
             await CitaService.ActualizarCitaAsync(citaSeleccionada);
 
+            // Crear un registro en CitaProcesada
+            var citaProcesada = new CitaProcesada
+                {
+                    IdCita = citaSeleccionada.IdCita,
+                    TotalPago = CalcularTotalPago(citaSeleccionada), // Método para calcular el total
+                    Point = CalcularPuntos(citaSeleccionada), // Método para calcular puntos (si aplica)
+                    EstadoPago = "Pendiente" // Estado inicial del pago
+                };
+
+            await CitaService.CrearCitaProcesadaAsync(citaProcesada);
+
             // Cerrar el modal y recargar la página
             mostrarModalAprobarCita = false;
             Navigation.NavigateTo("/aprobar-citas", forceLoad: true);
         }
+    }
+
+    private decimal CalcularTotalPago(Cita cita)
+    {
+        // Sumar el precio de todos los servicios asociados a la cita
+        return cita.CitaServicios.Sum(cs => cs.Servicio.Precio);
+    }
+
+    private int CalcularPuntos(Cita cita)
+    {
+        // Lógica para calcular puntos (por ejemplo, 1 punto por cada $10 gastados)
+        return (int)(CalcularTotalPago(cita) / 10);
     }
 }

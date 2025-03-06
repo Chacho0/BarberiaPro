@@ -1,0 +1,102 @@
+﻿@page "/mis-citas"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject UserStateService UserStateService
+@inject HttpClient Http
+
+<h2>Mis Citas Procesadas</h2>
+
+@if (citasProcesadas.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID Cita</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Total a Pagar</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cita in citasProcesadas)
+            {
+                <tr>
+                    <td>@cita.Cita.IdCita</td>
+                    <td>@cita.Cita.Fecha.ToShortDateString()</td>
+                    <td>@cita.Cita.Hora</td>
+                    <td>@cita.TotalPago.ToString("C")</td>
+                    <td>
+                        <button class="btn-pagar" @onclick="() => RealizarPago(cita.TotalPago, cita.IdCitaProcesada)">Pagar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- Botón para pagar múltiples citas -->
+    <button class="btn-pagar-multiple" @onclick="RealizarPagoMultiple">Pagar Seleccionadas</button>
+}
+else
+{
+    <p>No tienes citas procesadas pendientes de pago.</p>
+}
+
+@code {
+    private List<CitaProcesada> citasProcesadas = new();
+    private int UsuarioActualId => UserStateService.UserId ?? 0; // Obtener el ID del usuario actual
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener las citas procesadas del cliente actual
+        citasProcesadas = await CitaService.ObtenerCitasProcesadasPorUsuarioAsync(UsuarioActualId);
+    }
+
+    private async Task RealizarPago(decimal totalPago, int idCitaProcesada)
+    {
+        try
+        {
+            // Llamar al backend para crear un PaymentIntent
+            var response = await Http.PostAsJsonAsync("api/pagos/crear-pago", new
+            {
+                Monto = totalPago,
+                IdCitaProcesada = idCitaProcesada
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<dynamic>();
+                var clientSecret = (string)data?.clientSecret ?? string.Empty;
+
+                // Redirigir a Stripe Checkout
+                await JSRuntime.InvokeVoidAsync("stripeCheckout", clientSecret);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.Error.WriteLine($"Error al crear el pago: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task RealizarPagoMultiple()
+    {
+        var citasSeleccionadas = citasProcesadas.Where(c => c.Seleccionada).ToList();
+        if (citasSeleccionadas.Any())
+        {
+            var totalPago = citasSeleccionadas.Sum(c => c.TotalPago);
+            await JSRuntime.InvokeVoidAsync("stripeCheckout", (double)totalPago, citasSeleccionadas.Select(c => c.IdCitaProcesada).ToArray());
+        }
+        else
+        {
+            Console.WriteLine("No hay citas seleccionadas para pagar.");
+        }
+    }
+}

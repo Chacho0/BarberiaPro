@@ -2,7 +2,6 @@
 @using BarberiaPro.Models
 @using BarberiaPro.Services
 @using Microsoft.EntityFrameworkCore
-@using global::BarberiaPro.Models
 @inject UsuarioService UsuarioService
 @inject EmpleadoService EmpleadoService
 @inject CargoService CargoService
@@ -85,11 +84,14 @@
 
                 <div class="form-group">
                     <label>Rol:</label>
-                    <select @bind="usuarioSeleccionado.RolId" @bind:event="onchange" class="form-control">
+                    <select @bind="usuarioSeleccionado.RolId" class="form-control">
                         <option value="1">Admin</option>
                         <option value="3">Empleado</option>
                         <option value="2">Cliente</option>
                     </select>
+
+
+
                 </div>
 
 @if (usuarioSeleccionado.RolId == 3 && usuarioSeleccionado.Empleado != null)
@@ -168,6 +170,9 @@
     private bool usuarioEsAdmin = false;
     private bool cargando = true;
     private bool errorCargando = false;
+    private int _rolId;
+   
+   
 
 
     protected override async Task OnInitializedAsync()
@@ -213,24 +218,27 @@
         }
        
     }
+   
     private void OnRolChanged(ChangeEventArgs e)
     {
-        // Convertir el valor seleccionado a entero
         usuarioSeleccionado.RolId = int.Parse(e.Value.ToString());
 
-        // Inicializar o eliminar el objeto Empleado según el rol seleccionado
         if (usuarioSeleccionado.RolId == 3)
         {
-            usuarioSeleccionado.Empleado = new Empleado();
+            usuarioSeleccionado.Empleado ??= new Empleado();
         }
         else
         {
             usuarioSeleccionado.Empleado = null;
         }
 
-        // Forzar la actualización del modal
+        // Asegura que el modal se refresque correctamente
+        mostrarModalUsuario = false;
         StateHasChanged();
+        mostrarModalUsuario = true;
     }
+
+
     private void AbrirModalAgregarUsuario()
     {
         usuarioSeleccionado = new Usuario
@@ -257,13 +265,18 @@
 
     private async Task GuardarUsuario()
     {
+        // Lógica OnRolChanged aquí (antes de guardar)
+        if (usuarioSeleccionado.RolId == 3)
+        {
+            usuarioSeleccionado.Empleado ??= new Empleado();
+        }
+        else
+        {
+            usuarioSeleccionado.Empleado = null;
+        }
+        // Si el rol no es "Empleado", eliminar el objeto Empleado
         if (usuarioSeleccionado.IdUsuario == 0)
         {
-            // Si el rol no es "Empleado", eliminar el objeto Empleado
-            if (usuarioSeleccionado.RolId != 3 && usuarioSeleccionado.Empleado != null)
-            {
-                usuarioSeleccionado.Empleado = null;
-            }
 
             // Agregar nuevo usuario
             await UsuarioService.AgregarUsuarioAsync(usuarioSeleccionado);
@@ -278,7 +291,6 @@
         usuarios = await UsuarioService.ObtenerUsuariosAsync();
         mostrarModalUsuario = false;
     }
-
     private async Task GuardarCargo()
     {
         await CargoService.AgregarCargoAsync(nuevoCargo);

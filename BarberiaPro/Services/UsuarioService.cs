@@ -15,6 +15,12 @@ namespace BarberiaPro.Services
             _dbContextFactory = dbContextFactory;
         }
 
+        public async Task<Usuario> GetUsuarioAsync(int userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Usuarios.FindAsync(userId);
+        }
+
         public async Task<List<Usuario>> ObtenerUsuariosAsync()
         {
             using var context = _dbContextFactory.CreateDbContext();

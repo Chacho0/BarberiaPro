@@ -1,0 +1,167 @@
+﻿@page "/admin-clientes"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@using static CitaService
+@inject CitaService CitaService
+@inject IJSRuntime JSRuntime
+@using QuestPDF.Fluent; 
+@using QuestPDF.Helpers; 
+@using QuestPDF.Infrastructure; 
+<h2>Administrar Clientes</h2>
+
+<!-- Filtros -->
+<div class="filtros">
+    <input type="text" @bind="filtroNombre" placeholder="Buscar por nombre" />
+    <select @bind="filtroMes">
+        <option value="">Todos los meses</option>
+        @for (int i = 1; i <= 12; i++)
+        {
+            <option value="@i">@i</option>
+        }
+    </select>
+    <select @bind="filtroAño">
+        <option value="">Todos los años</option>
+        @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+        {
+            <option value="@i">@i</option>
+        }
+    </select>
+    <select @bind="filtroEstadoPago">
+        <option value="">Todos</option>
+        <option value="Pendiente">Pendientes por pagar</option>
+        <option value="Pagado">Clientes Pagos</option>
+    </select>
+    <button @onclick="FiltrarClientes">Filtrar</button>
+</div>
+
+<!-- Botón para generar el reporte en PDF -->
+<button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
+
+<!-- Listado de clientes -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nombre del Cliente</th>
+            <th>Estado de Pago</th>
+            <th>Fecha de Cita</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cliente in clientesFiltrados)
+        {
+            <tr>
+                <td>@cliente.NombreCliente</td>
+                <td>@cliente.EstadoPago</td>
+                <td>@cliente.FechaCita.ToShortDateString()</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<ClientePagoInfo> clientes = new();
+    private List<ClientePagoInfo> clientesFiltrados = new();
+    private string filtroNombre = string.Empty;
+    private int? filtroMes = null;
+    private int? filtroAño = null;
+    private string filtroEstadoPago = string.Empty; // Filtro por estado de pago
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener todos los clientes con su estado de pago
+        clientes = await CitaService.ObtenerClientesConEstadoPagoAsync();
+        clientesFiltrados = clientes;
+    }
+
+    private void FiltrarClientes()
+    {
+        // Aplicar filtros
+        clientesFiltrados = clientes
+            .Where(c => string.IsNullOrEmpty(filtroNombre) || c.NombreCliente.Contains(filtroNombre, StringComparison.OrdinalIgnoreCase))
+            .Where(c => !filtroMes.HasValue || c.FechaCita.Month == filtroMes)
+            .Where(c => !filtroAño.HasValue || c.FechaCita.Year == filtroAño)
+            .Where(c => string.IsNullOrEmpty(filtroEstadoPago) || c.EstadoPago == filtroEstadoPago)
+            .ToList();
+    }
+
+    private async Task GenerarReportePdf()
+    {
+        // Generar el PDF
+        await GenerarPdfAsync();
+
+        // Descargar el PDF
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", "Reporte.pdf");
+    }
+
+    private async Task GenerarPdfAsync()
+    {
+        // Crear el documento PDF
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(12));
+
+                // Encabezado con la imagen y el título
+                page.Header()
+     .Row(row =>
+     {
+     
+
+     row.RelativeItem()
+         .Column(column =>
+         {
+             column.Item().Text("Reporte de Pagos").Bold().FontSize(18);
+             column.Item().Text($"Tipo: {ObtenerTipoReporte()}").FontSize(14);
+         });
+        });
+
+                // Contenido del reporte
+                page.Content()
+                    .PaddingVertical(1, Unit.Centimetre)
+                    .Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(); // Nombre
+                            columns.RelativeColumn(); // Estado de pago
+                            columns.RelativeColumn(); // Fecha de cita
+                        });
+
+                        // Encabezados de la tabla
+                        table.Header(header =>
+                        {
+                            header.Cell().Text("Nombre del Cliente").Bold();
+                            header.Cell().Text("Estado de Pago").Bold();
+                            header.Cell().Text("Fecha de Cita").Bold();
+                        });
+
+                        // Datos de la tabla
+                        foreach (var cliente in clientesFiltrados)
+                        {
+                            table.Cell().Text(cliente.NombreCliente);
+                            table.Cell().Text(cliente.EstadoPago);
+                            table.Cell().Text(cliente.FechaCita.ToShortDateString());
+                        }
+                    });
+            });
+        });
+
+        // Guardar el PDF en un archivo
+        var pdfBytes = document.GeneratePdf();
+        await File.WriteAllBytesAsync("Reporte.pdf", pdfBytes);
+
+        Console.WriteLine("Reporte PDF generado y guardado como 'Reporte.pdf'.");
+    }
+
+
+    private string ObtenerTipoReporte()
+    {
+        return string.IsNullOrEmpty(filtroEstadoPago) ? "Reporte de Pagos" :
+               filtroEstadoPago == "Pendiente" ? "Pendientes por pagar" :
+               "Clientes Pagos";
+    }
+}
