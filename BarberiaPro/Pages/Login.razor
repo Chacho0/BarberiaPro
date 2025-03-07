@@ -5,13 +5,17 @@
 @inject NavigationManager Navigation
 @inject UserStateService UserStateService
 
-<h3>Login</h3>
-
 <div class="login-container">
+    <!-- Logo en la parte superior -->
+    <img src="/Perfiles/Logos.jpeg" alt="Logo" class="logo-login" />
+
+    <h3>Login</h3>
+
     <input type="email" placeholder="Correo" @bind="correo" />
     <input type="password" placeholder="Contraseña" @bind="password" />
     <button @onclick="IniciarSesion">Iniciar Sesión</button>
     <Linklabel @onclick="IrARegistro" class="btn-registro">Registrar</Linklabel>
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="error-message">@errorMessage</div>

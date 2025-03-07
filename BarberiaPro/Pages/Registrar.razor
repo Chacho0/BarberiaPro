@@ -5,14 +5,19 @@
 @inject AuthenticationService AuthService
 @inject NavigationManager Navigation
 
-<h3>Registro de Usuario</h3>
-
 <div class="registro-container">
+    <!-- Logo en la parte superior -->
+    <img src="/Perfiles/Logos.jpeg" alt="Logo" class="logo-registro" />
+
+    <h3>Registro de Usuario</h3>
+
     <input type="text" placeholder="Nombre" @bind="nombre" />
     <input type="email" placeholder="Correo" @bind="correo" />
     <input type="password" placeholder="Contraseña" @bind="password" />
+
     <button @onclick="RegistrarUsuario">Registrar</button>
     <button @onclick="IrALogin" class="btn-login">Volver al Login</button>
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="error-message">@errorMessage</div>

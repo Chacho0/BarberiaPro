@@ -7,6 +7,11 @@
 @using QuestPDF.Fluent; 
 @using QuestPDF.Helpers; 
 @using QuestPDF.Infrastructure; 
+@using System.Reflection;
+@using Microsoft.AspNetCore.Hosting; 
+@using Microsoft.Extensions.Hosting;
+@inject IWebHostEnvironment Environment
+@using System.IO;
 <h2>Administrar Clientes</h2>
 
 <!-- Filtros -->
@@ -57,7 +62,7 @@
         }
     </tbody>
 </table>
-
+<script src="/Perfiles/site.js"></script>
 @code {
     private List<ClientePagoInfo> clientes = new();
     private List<ClientePagoInfo> clientesFiltrados = new();
@@ -65,7 +70,7 @@
     private int? filtroMes = null;
     private int? filtroAño = null;
     private string filtroEstadoPago = string.Empty; // Filtro por estado de pago
-
+   
     protected override async Task OnInitializedAsync()
     {
         // Obtener todos los clientes con su estado de pago
@@ -86,16 +91,34 @@
 
     private async Task GenerarReportePdf()
     {
-        // Generar el PDF
-        await GenerarPdfAsync();
+        var pdfBytes = await GenerarPdfAsync();
 
-        // Descargar el PDF
-        await JSRuntime.InvokeVoidAsync("descargarArchivo", "Reporte.pdf");
+        // Convertir en base64 para que JavaScript pueda procesarlo
+        var base64String = Convert.ToBase64String(pdfBytes);
+
+        // Invocar JavaScript para forzar la descarga
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", base64String, "Reporte.pdf");
     }
 
-    private async Task GenerarPdfAsync()
+    private async Task<byte[]> GenerarPdfAsync()
     {
-        // Crear el documento PDF
+        byte[] logoBytes;
+
+        // Obtén la ruta completa al archivo de imagen
+        var imagePath = Path.Combine(Environment.WebRootPath, "Perfiles", "Logos.jpeg");
+
+        // Intenta leer la imagen
+        try
+        {
+            logoBytes = await File.ReadAllBytesAsync(imagePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al leer la imagen: {ex.Message}");
+            // Manejar el error aquí (por ejemplo, mostrar una imagen de marcador de posición)
+            return null; // O lanza una excepción, dependiendo de tu lógica
+        }
+
         var document = Document.Create(container =>
         {
             container.Page(page =>
@@ -105,59 +128,78 @@
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(x => x.FontSize(12));
 
-                // Encabezado con la imagen y el título
                 page.Header()
-     .Row(row =>
-     {
-     
+                    .Row(row =>
+                    {
+                        // Columna para el logo (usando MemoryStream)
+                        if (logoBytes != null) // Verifica si la imagen se cargó correctamente
+                        {
+                            using (var stream = new MemoryStream(logoBytes))
+                            {
+                                row.RelativeItem(1).Image(stream);
+                            }
+                        }
+                        else
+                        {
+                            // Si no se pudo cargar la imagen, mostrar un placeholder o dejar la columna vacía
+                            row.RelativeItem(1).Text("Logo no disponible");
+                        }
 
-     row.RelativeItem()
-         .Column(column =>
-         {
-             column.Item().Text("Reporte de Pagos").Bold().FontSize(18);
-             column.Item().Text($"Tipo: {ObtenerTipoReporte()}").FontSize(14);
-         });
-        });
+                        // Columna para el título, tipo de reporte y fecha
+                        row.RelativeItem(3)
+                            .Column(column =>
+                            {
+                                column.Item().AlignCenter().Text("Reporte de Pagos").Bold().FontSize(18);
+                                column.Item().AlignCenter().Text($"Tipo: {ObtenerTipoReporte()}").FontSize(14);
+                                column.Item().AlignCenter().Text($"Fecha: {DateTime.Now.ToShortDateString()}").FontSize(12);
+                            });
+                    });
 
-                // Contenido del reporte
                 page.Content()
                     .PaddingVertical(1, Unit.Centimetre)
                     .Table(table =>
                     {
+                        // Definición de columnas con ancho relativo
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(); // Nombre
-                            columns.RelativeColumn(); // Estado de pago
-                            columns.RelativeColumn(); // Fecha de cita
+                            columns.RelativeColumn(3); // Nombre del Cliente
+                            columns.RelativeColumn(2); // Estado de Pago
+                            columns.RelativeColumn(2); // Fecha de Cita
                         });
 
-                        // Encabezados de la tabla
+                        // Estilo para el encabezado
                         table.Header(header =>
                         {
-                            header.Cell().Text("Nombre del Cliente").Bold();
-                            header.Cell().Text("Estado de Pago").Bold();
-                            header.Cell().Text("Fecha de Cita").Bold();
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Nombre del Cliente").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Estado de Pago").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Fecha de Cita").Bold().FontSize(13);
                         });
 
                         // Datos de la tabla
                         foreach (var cliente in clientesFiltrados)
                         {
-                            table.Cell().Text(cliente.NombreCliente);
-                            table.Cell().Text(cliente.EstadoPago);
-                            table.Cell().Text(cliente.FechaCita.ToShortDateString());
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(clientesFiltrados.IndexOf(cliente) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cliente.NombreCliente);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(clientesFiltrados.IndexOf(cliente) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cliente.EstadoPago).FontColor(cliente.EstadoPago == "Pendiente" ? Colors.Red.Medium : Colors.Green.Medium);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(clientesFiltrados.IndexOf(cliente) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cliente.FechaCita.ToShortDateString());
                         }
+                    });
+
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Página ");
+                        x.CurrentPageNumber();
+                        x.Span(" de ");
+                        x.TotalPages();
                     });
             });
         });
 
-        // Guardar el PDF en un archivo
         var pdfBytes = document.GeneratePdf();
-        await File.WriteAllBytesAsync("Reporte.pdf", pdfBytes);
 
-        Console.WriteLine("Reporte PDF generado y guardado como 'Reporte.pdf'.");
+        return pdfBytes;
     }
-
-
     private string ObtenerTipoReporte()
     {
         return string.IsNullOrEmpty(filtroEstadoPago) ? "Reporte de Pagos" :
