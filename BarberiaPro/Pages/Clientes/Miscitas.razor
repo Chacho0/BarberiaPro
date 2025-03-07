@@ -5,10 +5,11 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject UserStateService UserStateService
-@inject HttpClient Http
+@inject IWebHostEnvironment Environment
 
 <h2>Mis Citas Procesadas</h2>
-
+<div class="fondo-container">
+</div>
 @if (citasProcesadas.Any())
 {
     <table class="table">
@@ -18,6 +19,7 @@
                 <th>Fecha</th>
                 <th>Hora</th>
                 <th>Total a Pagar</th>
+                <th>Estado</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -30,24 +32,77 @@
                     <td>@cita.Cita.Hora</td>
                     <td>@cita.TotalPago.ToString("C")</td>
                     <td>
-                        <button class="btn-pagar" @onclick="() => RealizarPago(cita.TotalPago, cita.IdCitaProcesada)">Pagar</button>
+                        @if (cita.EstadoPago == "Pendiente")
+                        {
+                            <span class="estado-pendiente">@cita.EstadoPago</span>
+                        }
+                        else if (cita.EstadoPago == "Revisión")
+                        {
+                            <span class="estado-revision">@cita.EstadoPago</span>
+                        }
+                        else if (cita.EstadoPago == "Pagado")
+                        {
+                            <span class="estado-pagado">@cita.EstadoPago</span>
+                        }
+                    </td>
+                    <td>
+                        @if (cita.EstadoPago == "Pendiente")
+                        {
+                            <button class="btn-pagar" @onclick="() => AbrirModalPago(cita)">Subir Voucher</button>
+                        }
+                        else
+                        {
+                            <span>No hay acciones disponibles</span>
+                        }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-
-    <!-- Botón para pagar múltiples citas -->
-    <button class="btn-pagar-multiple" @onclick="RealizarPagoMultiple">Pagar Seleccionadas</button>
 }
 else
 {
-    <p>No tienes citas procesadas pendientes de pago.</p>
+    <p>No tienes citas procesadas.</p>
+}
+
+<!-- Modal para subir voucher y número de transferencia -->
+@if (mostrarModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <h3>Subir Voucher</h3>
+            <div class="form-group">
+                <label>Total a Pagar:</label>
+                <input type="text" value="@citaSeleccionada.TotalPago.ToString("C")" readonly />
+            </div>
+            <div class="form-group">
+                <label>Voucher:</label>
+                <InputFile OnChange="CargarVoucher" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Número de Transferencia:</label>
+                <input type="text" @bind="numeroTransferencia" placeholder="Número de Transferencia" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Observación:</label>
+                <textarea @bind="observacion" placeholder="Observación" class="form-control"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-guardar" @onclick="GuardarVoucher">Guardar</button>
+                <button class="btn-cerrar" @onclick="CerrarModal">Cerrar</button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
     private List<CitaProcesada> citasProcesadas = new();
     private int UsuarioActualId => UserStateService.UserId ?? 0; // Obtener el ID del usuario actual
+    private bool mostrarModal = false;
+    private CitaProcesada citaSeleccionada;
+    private string numeroTransferencia;
+    private string observacion;
+    private IBrowserFile voucherFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,48 +110,55 @@ else
         citasProcesadas = await CitaService.ObtenerCitasProcesadasPorUsuarioAsync(UsuarioActualId);
     }
 
-    private async Task RealizarPago(decimal totalPago, int idCitaProcesada)
+    private void AbrirModalPago(CitaProcesada cita)
     {
-        try
-        {
-            // Llamar al backend para crear un PaymentIntent
-            var response = await Http.PostAsJsonAsync("api/pagos/crear-pago", new
-            {
-                Monto = totalPago,
-                IdCitaProcesada = idCitaProcesada
-            });
-
-            if (response.IsSuccessStatusCode)
-            {
-                var data = await response.Content.ReadFromJsonAsync<dynamic>();
-                var clientSecret = (string)data?.clientSecret ?? string.Empty;
-
-                // Redirigir a Stripe Checkout
-                await JSRuntime.InvokeVoidAsync("stripeCheckout", clientSecret);
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.Error.WriteLine($"Error al crear el pago: {error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error: {ex.Message}");
-        }
+        citaSeleccionada = cita;
+        mostrarModal = true;
     }
 
-    private async Task RealizarPagoMultiple()
+    private void CerrarModal()
     {
-        var citasSeleccionadas = citasProcesadas.Where(c => c.Seleccionada).ToList();
-        if (citasSeleccionadas.Any())
+        mostrarModal = false;
+        citaSeleccionada = null;
+        numeroTransferencia = string.Empty;
+        observacion = string.Empty;
+        voucherFile = null;
+    }
+
+    private async Task CargarVoucher(InputFileChangeEventArgs e)
+    {
+        voucherFile = e.File;
+    }
+
+    private async Task GuardarVoucher()
+    {
+        if (voucherFile != null && !string.IsNullOrEmpty(numeroTransferencia))
         {
-            var totalPago = citasSeleccionadas.Sum(c => c.TotalPago);
-            await JSRuntime.InvokeVoidAsync("stripeCheckout", (double)totalPago, citasSeleccionadas.Select(c => c.IdCitaProcesada).ToArray());
-        }
-        else
-        {
-            Console.WriteLine("No hay citas seleccionadas para pagar.");
+            // Guardar el voucher en el servidor
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(voucherFile.Name);
+            var path = Path.Combine(Environment.WebRootPath, "Vouchers", fileName);
+
+            Directory.CreateDirectory(Path.Combine(Environment.WebRootPath, "Vouchers"));
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await voucherFile.OpenReadStream().CopyToAsync(stream);
+            }
+
+            // Actualizar la cita procesada con el voucher y número de transferencia
+            citaSeleccionada.VoucherPath = "/Vouchers/" + fileName;
+            citaSeleccionada.NumeroTransferencia = numeroTransferencia;
+            citaSeleccionada.Observacion = observacion;
+            citaSeleccionada.EstadoPago = "Revisión"; // Cambiar el estado a "Revisión"
+
+            // Guardar los cambios en la base de datos utilizando el servicio
+            await CitaService.ActualizarCitaProcesadaAsync(citaSeleccionada);
+
+            // Cerrar el modal
+            CerrarModal();
+
+            // Actualizar la lista de citas
+            citasProcesadas = await CitaService.ObtenerCitasProcesadasPorUsuarioAsync(UsuarioActualId);
         }
     }
 }

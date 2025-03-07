@@ -10,7 +10,8 @@
 @inject IWebHostEnvironment Environment
 
 <h3>Perfil del Cliente</h3>
-
+<div class="fondo-container">
+</div>
 @if (perfilCliente != null && perfilCliente.Usuario != null)
 {
     <EditForm Model="@perfilCliente" OnValidSubmit="GuardarPerfil">

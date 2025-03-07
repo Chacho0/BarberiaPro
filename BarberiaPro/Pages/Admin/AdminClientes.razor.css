@@ -1,4 +1,17 @@
-﻿.btn-reporte, .filtros button {
+﻿.fondo-container {
+    background-image: url('/Perfiles/Portal.jpeg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Asegura que el fondo esté detrás del contenido */
+    background-position: center center; /* Centra la imagen horizontal y verticalmente */
+}
+.btn-reporte, .filtros button {
     background-color: #007bff;
     color: white;
     padding: 10px 15px;
@@ -45,4 +58,115 @@ tr:nth-child(even) {
     background: white;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
+}
+
+/* Estilos para el modal de ver información */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 600px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+    .modal-content h3 {
+        color: #007bff;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    .modal-content .form-group {
+        margin-bottom: 20px;
+    }
+
+        .modal-content .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .modal-content .form-group input,
+        .modal-content .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1em;
+            color: #495057;
+        }
+
+            .modal-content .form-group input:focus,
+            .modal-content .form-group textarea:focus {
+                border-color: #80bdff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+                outline: 0;
+            }
+
+.voucher-imagen {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modal-acciones {
+    text-align: right;
+    margin-top: 20px;
+}
+
+.btn-aprobar,
+.btn-no-aprobar,
+.btn-cerrar {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-left: 10px;
+}
+
+.btn-aprobar {
+    background-color: #28a745; /* Verde */
+    color: white;
+}
+
+.btn-no-aprobar {
+    background-color: #dc3545; /* Rojo */
+    color: white;
+}
+
+.btn-cerrar {
+    background-color: #6c757d; /* Gris */
+    color: white;
+}
+
+.btn-aprobar:hover {
+    background-color: #218838; /* Verde más oscuro */
+    transform: translateY(-2px);
+}
+
+.btn-no-aprobar:hover {
+    background-color: #c82333; /* Rojo más oscuro */
+    transform: translateY(-2px);
+}
+
+.btn-cerrar:hover {
+    background-color: #5a6268; /* Gris más oscuro */
+    transform: translateY(-2px);
 }

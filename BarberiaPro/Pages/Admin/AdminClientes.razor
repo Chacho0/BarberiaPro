@@ -13,7 +13,9 @@
 @inject IWebHostEnvironment Environment
 @using System.IO;
 <h2>Administrar Clientes</h2>
+<div class="fondo-container">
 
+</div>
 <!-- Filtros -->
 <div class="filtros">
     <input type="text" @bind="filtroNombre" placeholder="Buscar por nombre" />
@@ -49,6 +51,7 @@
             <th>Nombre del Cliente</th>
             <th>Estado de Pago</th>
             <th>Fecha de Cita</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -58,14 +61,58 @@
                 <td>@cliente.NombreCliente</td>
                 <td>@cliente.EstadoPago</td>
                 <td>@cliente.FechaCita.ToShortDateString()</td>
+                <td>
+                    <button class="btn-ver-info" @onclick="() => AbrirModalVerInfo(cliente)">Ver Información</button>
+                </td>
             </tr>
         }
     </tbody>
 </table>
+<!-- Modal para ver información del cliente -->
+@if (mostrarModalVerInfo)
+{
+    <div class="modal-backdrop">
+        <div class="modal-content">
+            <h3>Información del Cliente</h3>
+            <div class="info-cliente">
+                <div class="form-group">
+                    <label>Nombre del Cliente:</label>
+                    <input type="text" value="@clienteSeleccionado?.NombreCliente" readonly class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label>Número de Referencia:</label>
+                    <input type="text" value="@clienteSeleccionado?.NumeroReferencia" readonly class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label>Voucher:</label>
+                    @if (!string.IsNullOrEmpty(clienteSeleccionado?.VoucherPath))
+                    {
+                        <img src="@clienteSeleccionado.VoucherPath" alt="Voucher" class="voucher-imagen" />
+                    }
+                    else
+                    {
+                        <p>No se ha subido un voucher.</p>
+                    }
+                </div>
+                <div class="form-group">
+                    <label>Observación:</label>
+                    <textarea readonly class="form-control">@clienteSeleccionado?.Observacion</textarea>
+                </div>
+            </div>
+            <div class="modal-acciones">
+                <button class="btn-aprobar" @onclick="AprobarCliente">Aprobar</button>
+                <button class="btn-no-aprobar" @onclick="NoAprobarCliente">No Aprobar</button>
+                <button class="btn-cerrar" @onclick="CerrarModalVerInfo">Cerrar</button>
+            </div>
+        </div>
+    </div>
+}
 <script src="/Perfiles/site.js"></script>
 @code {
     private List<ClientePagoInfo> clientes = new();
     private List<ClientePagoInfo> clientesFiltrados = new();
+    private bool mostrarModalVerInfo = false;
+    private ClientePagoInfo? clienteSeleccionado;
     private string filtroNombre = string.Empty;
     private int? filtroMes = null;
     private int? filtroAño = null;
@@ -200,10 +247,44 @@
 
         return pdfBytes;
     }
+    
     private string ObtenerTipoReporte()
     {
         return string.IsNullOrEmpty(filtroEstadoPago) ? "Reporte de Pagos" :
                filtroEstadoPago == "Pendiente" ? "Pendientes por pagar" :
                "Clientes Pagos";
     }
+    
+    private void AbrirModalVerInfo(ClientePagoInfo cliente)
+    {
+        clienteSeleccionado = cliente;
+        mostrarModalVerInfo = true;
+    }
+
+    private void CerrarModalVerInfo()
+    {
+        mostrarModalVerInfo = false;
+        clienteSeleccionado = null;
+    }
+
+    private async Task AprobarCliente()
+    {
+        if (clienteSeleccionado != null)
+        {
+            // Lógica para aprobar al cliente
+            Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} aprobado.");
+            CerrarModalVerInfo();
+        }
+    }
+
+    private async Task NoAprobarCliente()
+    {
+        if (clienteSeleccionado != null)
+        {
+            // Lógica para no aprobar al cliente
+            Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} no aprobado.");
+            CerrarModalVerInfo();
+        }
+    }
+
 }

@@ -1,51 +1,53 @@
-﻿@page "/"
-@layout VacioLayout
-@using BarberiaPro.Services
-@inject AuthenticationService AuthService
-@inject NavigationManager Navigation
-@inject UserStateService UserStateService
+﻿@page "/"  
+@layout VacioLayout  
+@using BarberiaPro.Services  
+@inject AuthenticationService AuthService  
+@inject NavigationManager Navigation  
+@inject UserStateService UserStateService  
 
-<div class="login-container">
-    <!-- Logo en la parte superior -->
-    <img src="/Perfiles/Logos.jpeg" alt="Logo" class="logo-login" />
+<div class="fondo-container">  
+    <div class="login-container">  
+        <!-- Logo en la parte superior -->  
+        <img src="/Perfiles/Logos.jpeg" alt="Logo" class="logo-login" />  
 
-    <h3>Login</h3>
+        <h3>Login</h3>  
 
-    <input type="email" placeholder="Correo" @bind="correo" />
-    <input type="password" placeholder="Contraseña" @bind="password" />
-    <button @onclick="IniciarSesion">Iniciar Sesión</button>
-    <Linklabel @onclick="IrARegistro" class="btn-registro">Registrar</Linklabel>
+        <input type="email" placeholder="Correo" @bind="correo" />  
+        <input type="password" placeholder="Contraseña" @bind="password" />  
+        <button @onclick="IniciarSesion">Iniciar Sesión</button>  
+        <Linklabel @onclick="IrARegistro" class="btn-registro">Registrar</Linklabel>  
 
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="error-message">@errorMessage</div>
-    }
-</div>
+        @if (!string.IsNullOrEmpty(errorMessage))  
+        {  
+            <div class="error-message">@errorMessage</div>  
+        }  
+    </div>  
+</div>  
 
-@code {
-    private string correo = string.Empty;
-    private string password = string.Empty;
-    private string errorMessage = string.Empty;
+@code {  
+    private string correo = string.Empty;  
+    private string password = string.Empty;  
+    private string errorMessage = string.Empty;  
 
-    private async Task IniciarSesion()
-    {
-        errorMessage = string.Empty;
+    private async Task IniciarSesion()  
+    {  
+        errorMessage = string.Empty;  
 
-        var result = await AuthService.LoginAsync(correo, password);
+        var result = await AuthService.LoginAsync(correo, password);  
 
-        if (result.Success)
-        {
-            UserStateService.SetUserId(result.UserId); // Guardar el ID del usuario
-            Navigation.NavigateTo("/home");
-        }
-        else
-        {
-            errorMessage = result.ErrorMessage;
-        }
-    }
+        if (result.Success)  
+        {  
+            UserStateService.SetUserId(result.UserId); // Guardar el ID del usuario  
+            Navigation.NavigateTo("/home");  
+        }  
+        else  
+        {  
+            errorMessage = result.ErrorMessage;  
+        }  
+    }  
 
-    private void IrARegistro()
-    {
-        Navigation.NavigateTo("/registro"); // Redirigir a la página de registro
-    }
-}
+    private void IrARegistro()  
+    {  
+        Navigation.NavigateTo("/registro"); // Redirigir a la página de registro  
+    }  
+}  

@@ -21,16 +21,6 @@ public class CitaService
             .Include(c => c.Empleado) // Incluye la información del empleado
             .ToListAsync();
     }
-    public async Task<List<CitaProcesada>> ObtenerCitasProcesadasPorUsuarioAsync(int idUsuario)
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-        return await context.CitasProcesadas
-            .Include(cp => cp.Cita)
-                .ThenInclude(c => c.Usuario)
-            .Where(cp => cp.Cita.IdUsuario == idUsuario && cp.EstadoPago == "Pendiente")
-            .ToListAsync();
-    }
-
     // Actualizar una cita
     public async Task ActualizarCitaAsync(Cita cita)
     {
@@ -82,6 +72,32 @@ public class CitaService
         context.CitasProcesadas.Add(citaProcesada);
         await context.SaveChangesAsync();
     }
+    public async Task<List<CitaProcesada>> ObtenerCitasProcesadasPorUsuarioAsync(int idUsuario)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        var citasProcesadas = await context.CitasProcesadas
+            .Include(cp => cp.Cita)
+                .ThenInclude(c => c.Usuario)
+            .Include(cp => cp.Cita)
+                .ThenInclude(c => c.CitaServicios)
+                    .ThenInclude(cs => cs.Servicio) // Incluir los servicios asociados a la cita
+            .Where(cp => cp.Cita.IdUsuario == idUsuario) // Obtener todas las citas del usuario
+            .ToListAsync();
+
+        // Calcular el total a pagar para cada cita procesada
+        foreach (var citaProcesada in citasProcesadas)
+        {
+            citaProcesada.TotalPago = citaProcesada.Cita.CitaServicios.Sum(cs => cs.Servicio.Precio);
+        }
+
+        return citasProcesadas;
+    }
+    public async Task ActualizarCitaProcesadaAsync(CitaProcesada citaProcesada)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        context.CitasProcesadas.Update(citaProcesada);
+        await context.SaveChangesAsync();
+    }
     public async Task<List<ClientePagoInfo>> ObtenerClientesConEstadoPagoAsync(int? mes = null, int? año = null)
     {
         using var context = _dbContextFactory.CreateDbContext();
@@ -101,18 +117,26 @@ public class CitaService
             .Select(cp => new ClientePagoInfo
             {
                 NombreCliente = cp.Cita.Usuario.Nombre, // Nombre del cliente
-                EstadoPago = cp.EstadoPago, // Estado de pago
+                EstadoPago = cp.EstadoPago.ToString(), // Convertir el enum a string
                 FechaCita = cp.Cita.Fecha // Fecha de la cita
             })
             .ToListAsync();
 
         return clientes;
     }
-
+    public async Task ActualizarCitaProcesada(CitaProcesada citaProcesada)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        context.CitasProcesadas.Update(citaProcesada);
+        await context.SaveChangesAsync();
+    }
     public class ClientePagoInfo
     {
         public string NombreCliente { get; set; } // Nombre del cliente
         public string EstadoPago { get; set; } // Estado de pago (Pagado/Pendiente)
         public DateTime FechaCita { get; set; } // Fecha de la cita
+        public string NumeroReferencia { get; set; }
+        public string? VoucherPath { get; set; } // Ruta del voucher (imagen)
+        public string? Observacion { get; set; }
     }
 }

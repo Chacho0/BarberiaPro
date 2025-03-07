@@ -1,16 +1,32 @@
-﻿.login-container {
+﻿.fondo-container {
+    background-image: url('/Perfiles/FondoP.jpeg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Asegura que el fondo esté detrás del contenido */
+    background-position: center center; /* Centra la imagen horizontal y verticalmente */
+}
+
+.login-container {
     max-width: 400px;
     margin: 50px auto;
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 10px;
-    background-color: #f9f9f9;
-    text-align: center; /* Centrar todo el contenido */
+    background-color: rgba(249, 249, 249, 0.8); /* Agregamos transparencia */
+    text-align: center;
+    position: relative; /* Asegura que el contenido esté encima del fondo */
+    z-index: 1; /* Asegura que el contenido esté encima del fondo */
 }
 
 .logo-login {
-    width: 120px; /* Ajusta el tamaño del logo */
-    margin-bottom: 15px; /* Espaciado entre el logo y el título */
+    width: 120px;
+    margin-bottom: 15px;
 }
 
 .login-container h3 {
