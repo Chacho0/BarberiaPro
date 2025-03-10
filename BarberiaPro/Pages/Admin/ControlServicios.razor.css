@@ -1,16 +1,4 @@
-﻿.fondo-container {
-    background-image: url('/Perfiles/Portal.jpeg');
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    height: 100vh;
-    width: 100vw;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: -1; /* Asegura que el fondo esté detrás del contenido */
-    background-position: center center; /* Centra la imagen horizontal y verticalmente */
-}
+﻿
 /* Estilos generales para la página */
 .btn-agregar-servicio {  
     padding: 10px 20px;  

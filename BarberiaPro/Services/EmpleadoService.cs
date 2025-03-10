@@ -27,5 +27,27 @@ namespace BarberiaPro.Services
                 await context.SaveChangesAsync();
             }
         }
+        public async Task<Empleado> ObtenerEmpleadoAsync(int idUsuario)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Empleados
+                .Include(e => e.Usuario)
+                .Include(e => e.Cargo)
+                .FirstOrDefaultAsync(e => e.IdUsuario == idUsuario) ?? new Empleado();
+        }
+
+        public async Task GuardarEmpleadoAsync(Empleado empleado)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            if (empleado.IdEmpleado == 0)
+            {
+                context.Empleados.Add(empleado);
+            }
+            else
+            {
+                context.Empleados.Update(empleado);
+            }
+            await context.SaveChangesAsync();
+        }
     }
 }

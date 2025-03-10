@@ -1,0 +1,93 @@
+﻿@page "/admin-reporte-clientes"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject IJSRuntime JSRuntime
+@inject IWebHostEnvironment Environment
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@using QuestPDF.Infrastructure
+@using System.IO;
+@using static CitaService
+
+<h2>Reporte de Todos los Clientes</h2>
+
+<button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nombre del Cliente</th>
+            <th>Estado de Pago</th>
+            <th>Fecha de Cita</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cliente in clientes)
+        {
+            <tr>
+                <td>@cliente.NombreCliente</td>
+                <td>@cliente.EstadoPago</td>
+                <td>@cliente.FechaCita.ToShortDateString()</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<ClientePagoInfo> clientes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener todos los clientes
+        clientes = await CitaService.ObtenerClientesConEstadoPagoAsync();
+    }
+
+    private async Task GenerarReportePdf()
+    {
+        var pdfBytes = await GenerarPdfAsync();
+        var base64String = Convert.ToBase64String(pdfBytes);
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", base64String, "Reporte_Todos_Los_Clientes.pdf");
+    }
+
+    private async Task<byte[]> GenerarPdfAsync()
+    {
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.Header()
+                    .AlignCenter().Text("Reporte de Todos los Clientes").Bold().FontSize(18);
+
+                page.Content()
+                    .Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3); // Nombre del Cliente
+                            columns.RelativeColumn(2); // Estado de Pago
+                            columns.RelativeColumn(2); // Fecha de Cita
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Text("Nombre del Cliente").Bold();
+                            header.Cell().Text("Estado de Pago").Bold();
+                            header.Cell().Text("Fecha de Cita").Bold();
+                        });
+
+                        foreach (var cliente in clientes)
+                        {
+                            table.Cell().Text(cliente.NombreCliente);
+                            table.Cell().Text(cliente.EstadoPago);
+                            table.Cell().Text(cliente.FechaCita.ToShortDateString());
+                        }
+                    });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+}

@@ -9,18 +9,34 @@ namespace BarberiaPro.Services
     public class UsuarioService
     {
         private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-        public UsuarioService(IDbContextFactory<AppDbContext> dbContextFactory)
+        private readonly AppDbContext _context;
+        public UsuarioService(IDbContextFactory<AppDbContext> dbContextFactory, AppDbContext context)
         {
             _dbContextFactory = dbContextFactory;
+            _context = context;
         }
+         public async Task<Usuario> AutenticarAsync(string correo, string password)
+        {
+            // Buscar el usuario por correo y contraseña
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Correo == correo && u.PassWord == password);
 
+            return usuario;
+        }
         public async Task<Usuario> GetUsuarioAsync(int userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Usuarios.FindAsync(userId);
         }
 
+        public async Task<Usuario> GetUsuarioNombre(string nombre)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Usuarios
+                .Include(u => u.Rol) // Incluir el rol del usuario
+                .Include(u => u.Empleado) // Incluir el empleado si existe
+                .FirstOrDefaultAsync(u => u.Nombre.Contains(nombre)); // Buscar por nombre
+        }
         public async Task<List<Usuario>> ObtenerUsuariosAsync()
         {
             using var context = _dbContextFactory.CreateDbContext();

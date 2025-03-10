@@ -13,61 +13,61 @@
 @inject IWebHostEnvironment Environment
 @using System.IO;
 <h2>Administrar Clientes</h2>
-<div class="fondo-container">
+<div class="content-container">
+    <!-- Filtros -->
+    <div class="filtros">
+        <input type="text" @bind="filtroNombre" placeholder="Buscar por nombre" />
+        <select @bind="filtroMes">
+            <option value="">Todos los meses</option>
+            @for (int i = 1; i <= 12; i++)
+            {
+                <option value="@i">@i</option>
+            }
+        </select>
+        <select @bind="filtroAño">
+            <option value="">Todos los años</option>
+            @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+            {
+                <option value="@i">@i</option>
+            }
+        </select>
+        <select @bind="filtroEstadoPago">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendientes por pagar</option>
+            <option value="Pagado">Clientes Pagos</option>
+            <option value="Revisión">En Revision</option>
+        </select>
+        <button @onclick="FiltrarClientes">Filtrar</button>
+    </div>
 
-</div>
-<!-- Filtros -->
-<div class="filtros">
-    <input type="text" @bind="filtroNombre" placeholder="Buscar por nombre" />
-    <select @bind="filtroMes">
-        <option value="">Todos los meses</option>
-        @for (int i = 1; i <= 12; i++)
-        {
-            <option value="@i">@i</option>
-        }
-    </select>
-    <select @bind="filtroAño">
-        <option value="">Todos los años</option>
-        @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
-        {
-            <option value="@i">@i</option>
-        }
-    </select>
-    <select @bind="filtroEstadoPago">
-        <option value="">Todos</option>
-        <option value="Pendiente">Pendientes por pagar</option>
-        <option value="Pagado">Clientes Pagos</option>
-    </select>
-    <button @onclick="FiltrarClientes">Filtrar</button>
-</div>
+    <!-- Botón para generar el reporte en PDF -->
+    <button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
 
-<!-- Botón para generar el reporte en PDF -->
-<button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
-
-<!-- Listado de clientes -->
-<table class="table">
-    <thead>
-        <tr>
-            <th>Nombre del Cliente</th>
-            <th>Estado de Pago</th>
-            <th>Fecha de Cita</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var cliente in clientesFiltrados)
-        {
+    <!-- Listado de clientes -->
+    <table class="table">
+        <thead>
             <tr>
-                <td>@cliente.NombreCliente</td>
-                <td>@cliente.EstadoPago</td>
-                <td>@cliente.FechaCita.ToShortDateString()</td>
-                <td>
-                    <button class="btn-ver-info" @onclick="() => AbrirModalVerInfo(cliente)">Ver Información</button>
-                </td>
+                <th>Nombre del Cliente</th>
+                <th>Estado de Pago</th>
+                <th>Fecha de Cita</th>
+                <th>Acciones</th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var cliente in clientesFiltrados)
+            {
+                <tr>
+                    <td>@cliente.NombreCliente</td>
+                    <td>@cliente.EstadoPago</td>
+                    <td>@cliente.FechaCita.ToShortDateString()</td>
+                    <td>
+                        <button class="btn-ver-info" @onclick="() => AbrirModalVerInfo(cliente)">Ver Información</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 <!-- Modal para ver información del cliente -->
 @if (mostrarModalVerInfo)
 {
@@ -81,7 +81,7 @@
                 </div>
                 <div class="form-group">
                     <label>Número de Referencia:</label>
-                    <input type="text" value="@clienteSeleccionado?.NumeroReferencia" readonly class="form-control" />
+                    <input type="text" value="@clienteSeleccionado?.NumeroTransferencia" readonly class="form-control" />
                 </div>
                 <div class="form-group">
                     <label>Voucher:</label>
@@ -100,8 +100,11 @@
                 </div>
             </div>
             <div class="modal-acciones">
-                <button class="btn-aprobar" @onclick="AprobarCliente">Aprobar</button>
-                <button class="btn-no-aprobar" @onclick="NoAprobarCliente">No Aprobar</button>
+                @if (clienteSeleccionado?.EstadoPago != "Pagado")
+                {
+                    <button class="btn-aprobar" @onclick="AprobarCliente">Aprobar</button>
+                    <button class="btn-no-aprobar" @onclick="NoAprobarCliente">No Aprobar</button>
+                }
                 <button class="btn-cerrar" @onclick="CerrarModalVerInfo">Cerrar</button>
             </div>
         </div>
@@ -271,9 +274,21 @@
     {
         if (clienteSeleccionado != null)
         {
-            // Lógica para aprobar al cliente
-            Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} aprobado.");
+            var citaProcesada = await CitaService.ObtenerCitaProcesadaPorClienteAsync(clienteSeleccionado.NombreCliente);
+
+            if (citaProcesada != null)
+            {
+                citaProcesada.EstadoPago = "Pagado";
+                await CitaService.ActualizarCitaProcesadaAsync(citaProcesada);
+                Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} aprobado.");
+            }
+            else
+            {
+                Console.WriteLine("No se encontró la cita procesada del cliente.");
+            }
+
             CerrarModalVerInfo();
+            await ActualizarListaClientes();
         }
     }
 
@@ -281,10 +296,27 @@
     {
         if (clienteSeleccionado != null)
         {
-            // Lógica para no aprobar al cliente
-            Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} no aprobado.");
+            var citaProcesada = await CitaService.ObtenerCitaProcesadaPorClienteAsync(clienteSeleccionado.NombreCliente);
+
+            if (citaProcesada != null)
+            {
+                citaProcesada.EstadoPago = "Pendiente";
+                await CitaService.ActualizarCitaProcesadaAsync(citaProcesada);
+                Console.WriteLine($"Cliente {clienteSeleccionado.NombreCliente} no aprobado.");
+            }
+            else
+            {
+                Console.WriteLine("No se encontró la cita procesada del cliente.");
+            }
+
             CerrarModalVerInfo();
+            await ActualizarListaClientes();
         }
     }
 
+    private async Task ActualizarListaClientes()
+    {
+        clientes = await CitaService.ObtenerClientesConEstadoPagoAsync();
+        FiltrarClientes();
+    }
 }

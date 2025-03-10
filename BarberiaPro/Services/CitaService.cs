@@ -5,10 +5,18 @@ using Microsoft.EntityFrameworkCore;
 public class CitaService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    
+   
 
     public CitaService(IDbContextFactory<AppDbContext> dbContextFactory)
     {
         _dbContextFactory = dbContextFactory;
+    }
+    public async Task<List<Cita>> ObtenerCitasAsync()
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        return await context.Citas.ToListAsync();
     }
     // Obtener citas pendientes
     public async Task<List<Cita>> ObtenerCitasPendientesAsync()
@@ -28,7 +36,16 @@ public class CitaService
         context.Citas.Update(cita);
         await context.SaveChangesAsync();
     }
-
+    public async Task<List<Cita>> ObtenerCitasPorEmpleadoAsync(int idEmpleado)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        return await context.Citas
+            .Where(c => c.IdEmpleado == idEmpleado) // Filtrar por empleado
+            .Include(c => c.Usuario) // Incluir información del cliente
+            .Include(c => c.CitaServicios) // Incluir servicios asociados
+                .ThenInclude(cs => cs.Servicio)
+            .ToListAsync();
+    }
     // Obtener todos los empleados activos
     public async Task<List<Empleado>> ObtenerEmpleadosActivosAsync()
     {
@@ -65,7 +82,28 @@ public class CitaService
         context.Citas.Add(cita);
         await context.SaveChangesAsync();
     }
+    public async Task<List<CitaInfo>> ObtenerCitasConDetallesAsync()
+    {
+        using var context = _dbContextFactory.CreateDbContext(); // Crear una instancia del contexto
 
+        var citas = await context.Citas // Usar el contexto creado
+            .Include(c => c.Usuario) // Incluir el cliente
+            .Include(c => c.Empleado) // Incluir el empleado
+            .Include(c => c.CitaServicios) // Incluir los servicios
+            .ThenInclude(cs => cs.Servicio) // Incluir el detalle de los servicios
+            .Select(c => new CitaInfo
+            {
+                NombreCliente = c.Usuario.Nombre,
+                NombreEmpleado = c.Empleado.Nombre,
+                FechaCita = c.Fecha,
+                HoraCita = c.Hora,
+                Estado = c.Estado,
+                Servicios = c.CitaServicios.Select(cs => cs.Servicio.TipoServicio).ToList()
+            })
+            .ToListAsync();
+
+        return citas;
+    }
     public async Task CrearCitaProcesadaAsync(CitaProcesada citaProcesada)
     {
         using var context = _dbContextFactory.CreateDbContext();
@@ -118,25 +156,50 @@ public class CitaService
             {
                 NombreCliente = cp.Cita.Usuario.Nombre, // Nombre del cliente
                 EstadoPago = cp.EstadoPago.ToString(), // Convertir el enum a string
-                FechaCita = cp.Cita.Fecha // Fecha de la cita
+                FechaCita = cp.Cita.Fecha, // Fecha de la cita
+                NumeroTransferencia = cp.NumeroTransferencia,
+                VoucherPath = cp.VoucherPath,
+                Observacion = cp.Observacion
             })
             .ToListAsync();
 
         return clientes;
     }
+
     public async Task ActualizarCitaProcesada(CitaProcesada citaProcesada)
     {
         using var context = _dbContextFactory.CreateDbContext();
         context.CitasProcesadas.Update(citaProcesada);
         await context.SaveChangesAsync();
     }
+
+    public async Task<CitaProcesada> ObtenerCitaProcesadaPorClienteAsync(string nombreCliente)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        return await context.CitasProcesadas
+            .Include(cp => cp.Cita)
+                .ThenInclude(c => c.Usuario)
+            .FirstOrDefaultAsync(cp => cp.Cita.Usuario.Nombre == nombreCliente);
+    }
     public class ClientePagoInfo
     {
+       
         public string NombreCliente { get; set; } // Nombre del cliente
         public string EstadoPago { get; set; } // Estado de pago (Pagado/Pendiente)
         public DateTime FechaCita { get; set; } // Fecha de la cita
-        public string NumeroReferencia { get; set; }
+        public string NumeroTransferencia { get; set; }
         public string? VoucherPath { get; set; } // Ruta del voucher (imagen)
         public string? Observacion { get; set; }
+
+       
+    }
+    public class CitaInfo
+    {
+        public string NombreCliente { get; set; }
+        public string NombreEmpleado { get; set; }
+        public DateTime FechaCita { get; set; }
+        public string HoraCita { get; set; }
+        public string Estado { get; set; }
+        public List<string> Servicios { get; set; } = new List<string>();
     }
 }

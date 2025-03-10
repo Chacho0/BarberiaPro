@@ -1,0 +1,154 @@
+﻿@page "/admin-reporte-citas-procesadas"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject IJSRuntime JSRuntime
+@inject IWebHostEnvironment Environment
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@using QuestPDF.Infrastructure
+@using System.IO
+
+<h2>Reporte de Citas Procesadas</h2>
+
+<!-- Botón para generar el reporte en PDF -->
+<button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
+
+<!-- Tabla para mostrar las citas procesadas -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nombre del Cliente</th>
+            <th>Estado de Pago</th>
+            <th>Fecha de Cita</th>
+            <th>Número de Transferencia</th>
+            <th>Observación</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cita in citasProcesadas)
+        {
+            <tr>
+                <td>@cita.NombreCliente</td>
+                <td>@cita.EstadoPago</td>
+                <td>@cita.FechaCita.ToShortDateString()</td>
+                <td>@cita.NumeroTransferencia</td>
+                <td>@cita.Observacion</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<CitaService.ClientePagoInfo> citasProcesadas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener las citas procesadas
+        citasProcesadas = await CitaService.ObtenerClientesConEstadoPagoAsync();
+    }
+
+    private async Task GenerarReportePdf()
+    {
+        var pdfBytes = await GenerarPdfAsync();
+        var base64String = Convert.ToBase64String(pdfBytes);
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", base64String, "Reporte_Citas_Procesadas.pdf");
+    }
+
+    private async Task<byte[]> GenerarPdfAsync()
+    {
+        byte[] logoBytes;
+
+        // Obtén la ruta completa al archivo de imagen
+        var imagePath = Path.Combine(Environment.WebRootPath, "Perfiles", "Logos.jpeg");
+
+        // Intenta leer la imagen
+        try
+        {
+            logoBytes = await File.ReadAllBytesAsync(imagePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al leer la imagen: {ex.Message}");
+            logoBytes = null;
+        }
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(12));
+
+                page.Header()
+                    .Row(row =>
+                    {
+                        if (logoBytes != null)
+                        {
+                            using (var stream = new MemoryStream(logoBytes))
+                            {
+                                row.RelativeItem(1).Image(stream);
+                            }
+                        }
+                        else
+                        {
+                            row.RelativeItem(1).Text("Logo no disponible");
+                        }
+
+                        row.RelativeItem(3)
+                            .Column(column =>
+                            {
+                                column.Item().AlignCenter().Text("Reporte de Citas Procesadas").Bold().FontSize(18);
+                                column.Item().AlignCenter().Text($"Fecha: {DateTime.Now.ToShortDateString()}").FontSize(12);
+                            });
+                    });
+
+                page.Content()
+                    .PaddingVertical(1, Unit.Centimetre)
+                    .Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3); // Nombre del Cliente
+                            columns.RelativeColumn(2); // Estado de Pago
+                            columns.RelativeColumn(2); // Fecha de Cita
+                            columns.RelativeColumn(2); // Número de Transferencia
+                            columns.RelativeColumn(3); // Observación
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Nombre del Cliente").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Estado de Pago").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Fecha de Cita").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Número de Transferencia").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Observación").Bold().FontSize(13);
+                        });
+
+                        foreach (var cita in citasProcesadas)
+                        {
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasProcesadas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.NombreCliente);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasProcesadas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.EstadoPago).FontColor(cita.EstadoPago == "Pendiente" ? Colors.Red.Medium : Colors.Green.Medium);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasProcesadas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.FechaCita.ToShortDateString());
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasProcesadas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.NumeroTransferencia);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasProcesadas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.Observacion);
+                        }
+                    });
+
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Página ");
+                        x.CurrentPageNumber();
+                        x.Span(" de ");
+                        x.TotalPages();
+                    });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+}

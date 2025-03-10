@@ -18,13 +18,13 @@
 
         public async Task<LoginResult> LoginAsync(string correo, string password)
         {
-            await _semaphore.WaitAsync(); // Bloquear el acceso
-
+            await _semaphore.WaitAsync(); // Bloquear el acceso  
             try
             {
                 using var context = _dbContextFactory.CreateDbContext();
 
                 var usuario = await context.Usuarios
+                    .Include(u => u.Rol) // Incluir la relación con Rol  
                     .FirstOrDefaultAsync(u => u.Correo == correo && u.PassWord == password);
 
                 if (usuario == null)
@@ -32,14 +32,18 @@
                     return new LoginResult { Success = false, ErrorMessage = "Credenciales inválidas" };
                 }
 
-                return new LoginResult { Success = true, UserId = usuario.IdUsuario }; // Devolver el ID del usuario
+                return new LoginResult
+                {
+                    Success = true,
+                    UserId = usuario.IdUsuario,
+                    Role = usuario.Rol?.TipoRol // Devolver el tipo de rol  
+                };
             }
             finally
             {
-                _semaphore.Release(); // Liberar el acceso
+                _semaphore.Release(); // Liberar el acceso  
             }
         }
-
         public async Task<LoginResult> RegistrarUsuarioAsync(Usuario usuario)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -64,6 +68,7 @@
     {
         public bool Success { get; set; }
         public string ErrorMessage { get; set; }
-        public int UserId { get; set; } // Añadir el ID del usuario
+        public int UserId { get; set; }  // Añadir el ID del usuario  
+        public string Role { get; set; } // Añadir el rol del usuario  
     }
 }

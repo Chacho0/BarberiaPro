@@ -67,3 +67,14 @@
         overflow-y: auto;
     }
 }
+.dropdown-menu {
+    display: none; /* Ocultar el menú por defecto */
+}
+
+    .dropdown-menu.show {
+        display: block; /* Mostrar el menú cuando se activa */
+    }
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+}  

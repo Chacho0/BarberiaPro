@@ -12,7 +12,7 @@ namespace BarberiaPro.Models
         public string Correo { get; set; }
         public string PassWord { get; set; }
         public int RolId { get; set; }
-        public Rol? Rol { get; set; }
+        public Rol Rol { get; set; }
 
         // Relación uno a uno con Empleado
         public Empleado? Empleado { get; set; }

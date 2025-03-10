@@ -11,6 +11,13 @@
 <h3>Control de Usuarios</h3>
 <div class="fondo-container">
 </div>
+
+<div class="form-group">
+    <label>Buscar Usuario:</label>
+    <InputText @bind-Value="textoBusqueda" class="form-control" placeholder="Buscar por nombre" />
+    <button class="btn btn-primary" @onclick="BuscarUsuario">Buscar Usuario</button>
+</div>
+
 <!-- Botón para agregar usuario -->
 <button class="btn btn-primary" @onclick="AbrirModalAgregarUsuario">Agregar Usuario</button>
 
@@ -26,7 +33,7 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var usuario in usuarios)
+        @foreach (var usuario in usuariosFiltrados)
         {
             <tr>
                 <td>@usuario.Nombre</td>
@@ -90,45 +97,42 @@
                         <option value="3">Empleado</option>
                         <option value="2">Cliente</option>
                     </select>
-
-
-
                 </div>
 
-@if (usuarioSeleccionado.RolId == 3 && usuarioSeleccionado.Empleado != null)
-{
-    <div class="form-group">
-        <label>Nombre del Empleado:</label>
-        <InputText @bind-Value="usuarioSeleccionado.Empleado.Nombre" class="form-control" />
-    </div>
-
-    <div class="form-group">
-        <label>Apellido del Empleado:</label>
-        <InputText @bind-Value="usuarioSeleccionado.Empleado.Apellido" class="form-control" />
-    </div>
-
-    <div class="form-group">
-        <label>Teléfono del Empleado:</label>
-        <InputText @bind-Value="usuarioSeleccionado.Empleado.Telefono" class="form-control" />
-    </div>
-
-    <div class="form-group">
-        <label>Cargo del Empleado:</label>
-        <div class="input-group">
-            <select @bind="usuarioSeleccionado.Empleado.IdCargo" class="form-control">
-                @foreach (var cargo in cargos)
+                @if (usuarioSeleccionado.RolId == 3 && usuarioSeleccionado.Empleado != null)
                 {
-                    <option value="@cargo.IdCargo">@cargo.DescripcionCargo</option>
+                    <div class="form-group">
+                        <label>Nombre del Empleado:</label>
+                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Nombre" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Apellido del Empleado:</label>
+                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Apellido" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teléfono del Empleado:</label>
+                        <InputText @bind-Value="usuarioSeleccionado.Empleado.Telefono" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cargo del Empleado:</label>
+                        <div class="input-group">
+                            <select @bind="usuarioSeleccionado.Empleado.IdCargo" class="form-control">
+                                @foreach (var cargo in cargos)
+                                {
+                                    <option value="@cargo.IdCargo">@cargo.DescripcionCargo</option>
+                                }
+                            </select>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" @onclick="AbrirModalAgregarCargo">
+                                    <i class="fas fa-plus"></i> <!-- Icono de agregar -->
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 }
-            </select>
-            <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="button" @onclick="AbrirModalAgregarCargo">
-                    <i class="fas fa-plus"></i> <!-- Icono de agregar -->
-                </button>
-            </div>
-        </div>
-    </div>
-}
 
                 <button type="submit" class="btn btn-primary">Guardar</button>
                 <button type="button" class="btn btn-secondary" @onclick="CerrarModalUsuario">Cerrar</button>
@@ -159,9 +163,9 @@
     </div>
 }
 
-
 @code {
     private List<Usuario> usuarios = new();
+    private List<Usuario> usuariosFiltrados = new();
     private List<Cargo> cargos = new();
     private Usuario usuarioSeleccionado = new();
     private Cargo nuevoCargo = new();
@@ -172,9 +176,8 @@
     private bool cargando = true;
     private bool errorCargando = false;
     private int _rolId;
-   
-   
-
+    private string textoBusqueda = string.Empty;
+    private Usuario? usuarioEncontrado;
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,10 +200,10 @@
 
                 // Cargar la lista de usuarios
                 usuarios = await UsuarioService.ObtenerUsuariosAsync();
+                usuariosFiltrados = usuarios;
 
                 // Cargar la lista de cargos
                 cargos = await CargoService.ObtenerCargosAsync();
-               
             }
             else
             {
@@ -217,39 +220,50 @@
         {
             cargando = false;
         }
-       
     }
-   
-    private void OnRolChanged(ChangeEventArgs e)
-    {
-        usuarioSeleccionado.RolId = int.Parse(e.Value.ToString());
 
-        if (usuarioSeleccionado.RolId == 3)
+    private void FiltrarUsuarios()
+    {
+        if (string.IsNullOrWhiteSpace(textoBusqueda))
         {
-            usuarioSeleccionado.Empleado ??= new Empleado();
+            usuariosFiltrados = usuarios;
         }
         else
         {
-            usuarioSeleccionado.Empleado = null;
+            usuariosFiltrados = usuarios.Where(u =>
+                u.Nombre.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                u.Correo.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                u.Rol?.TipoRol.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) == true
+            ).ToList();
         }
-
-        // Asegura que el modal se refresque correctamente
-        mostrarModalUsuario = false;
-        StateHasChanged();
-        mostrarModalUsuario = true;
     }
 
+    private void OnBuscarChanged(ChangeEventArgs e)
+    {
+        textoBusqueda = e.Value?.ToString() ?? string.Empty;
+        FiltrarUsuarios();
+    }
 
     private void AbrirModalAgregarUsuario()
     {
         usuarioSeleccionado = new Usuario
-            {
+        {
             // Inicializar Empleado solo si el rol es "Empleado"
-                Empleado = usuarioSeleccionado.RolId == 3 ? new Empleado() : null
-            };
+            Empleado = usuarioSeleccionado.RolId == 3 ? new Empleado() : null
+        };
         mostrarModalUsuario = true;
     }
-   
+    private async Task BuscarUsuario()
+    {
+        if (!string.IsNullOrEmpty(textoBusqueda))
+        {
+            usuarioEncontrado = await UsuarioService.GetUsuarioNombre(textoBusqueda);
+        }
+        else
+        {
+            usuarioEncontrado = null;
+        }
+    }
 
     private void AbrirModalEditarUsuario(Usuario usuario)
     {
@@ -261,12 +275,10 @@
     {
         nuevoCargo = new Cargo();
         mostrarModalCargo = true;
-        
     }
 
     private async Task GuardarUsuario()
     {
-        // Lógica OnRolChanged aquí (antes de guardar)
         if (usuarioSeleccionado.RolId == 3)
         {
             usuarioSeleccionado.Empleado ??= new Empleado();
@@ -275,34 +287,31 @@
         {
             usuarioSeleccionado.Empleado = null;
         }
-        // Si el rol no es "Empleado", eliminar el objeto Empleado
+
         if (usuarioSeleccionado.IdUsuario == 0)
         {
-
-            // Agregar nuevo usuario
             await UsuarioService.AgregarUsuarioAsync(usuarioSeleccionado);
         }
         else
         {
-            // Editar usuario existente
             await UsuarioService.EditarUsuarioAsync(usuarioSeleccionado);
         }
 
-        // Recargar la lista de usuarios
         usuarios = await UsuarioService.ObtenerUsuariosAsync();
+        FiltrarUsuarios();
         mostrarModalUsuario = false;
     }
+
     private async Task GuardarCargo()
     {
         await CargoService.AgregarCargoAsync(nuevoCargo);
-        cargos = await CargoService.ObtenerCargosAsync(); // Recargar la lista de cargos
+        cargos = await CargoService.ObtenerCargosAsync();
         mostrarModalCargo = false;
     }
+
     private async Task ConfirmarEliminarUsuario(int idUsuario)
     {
-
         await EliminarUsuario(idUsuario);
-
     }
 
     private void CerrarModalUsuario()
@@ -319,11 +328,13 @@
     {
         await UsuarioService.EliminarUsuarioAsync(idUsuario);
         usuarios = await UsuarioService.ObtenerUsuariosAsync();
+        FiltrarUsuarios();
     }
-
+   
     private async Task CambiarEstadoEmpleado(int idEmpleado, bool estado)
     {
         await EmpleadoService.CambiarEstadoEmpleadoAsync(idEmpleado, estado);
         usuarios = await UsuarioService.ObtenerUsuariosAsync();
+        FiltrarUsuarios();
     }
 }

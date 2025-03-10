@@ -1,0 +1,168 @@
+﻿@page "/empleado-citas"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject UserStateService UserStateService
+@inject IJSRuntime JSRuntime
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@using QuestPDF.Infrastructure
+@using System.IO
+
+<h3>Listado de Citas</h3>
+
+<div class="filtros">
+    <label>Filtrar por fecha:</label>
+    <input type="date" @bind="filtroFecha" />
+    <button @onclick="FiltrarCitas">Filtrar</button>
+    <button @onclick="LimpiarFiltro">Limpiar Filtro</button>
+</div>
+
+<!-- Botón para generar el reporte en PDF -->
+<button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
+
+<!-- Listado de citas -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Cliente</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Servicios</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cita in citasFiltradas)
+        {
+            <tr>
+                <td>@cita.Usuario.Nombre</td>
+                <td>@cita.Fecha.ToShortDateString()</td>
+                <td>@cita.Hora</td>
+                <td>
+                    <ul>
+                        @foreach (var servicio in cita.CitaServicios)
+                        {
+                            <li>@servicio.Servicio.TipoServicio</li>
+                        }
+                    </ul>
+                </td>
+                <td>@cita.Estado</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Cita> citas = new();
+    private List<Cita> citasFiltradas = new();
+    private DateTime? filtroFecha = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserStateService.UserId.HasValue)
+        {
+            var idEmpleado = UserStateService.UserId.Value;
+            citas = await CitaService.ObtenerCitasPorEmpleadoAsync(idEmpleado);
+            citasFiltradas = citas;
+        }
+    }
+
+    private void FiltrarCitas()
+    {
+        if (filtroFecha.HasValue)
+        {
+            citasFiltradas = citas
+                .Where(c => c.Fecha.Date == filtroFecha.Value.Date)
+                .ToList();
+        }
+        else
+        {
+            citasFiltradas = citas;
+        }
+    }
+
+    private void LimpiarFiltro()
+    {
+        filtroFecha = null;
+        citasFiltradas = citas;
+    }
+
+    private async Task GenerarReportePdf()
+    {
+        var pdfBytes = await GenerarPdfAsync();
+
+        // Convertir en base64 para que JavaScript pueda procesarlo
+        var base64String = Convert.ToBase64String(pdfBytes);
+
+        // Invocar JavaScript para forzar la descarga
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", base64String, "ReporteCitas.pdf");
+    }
+
+    private async Task<byte[]> GenerarPdfAsync()
+    {
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(12));
+
+                page.Header()
+                    .AlignCenter()
+                    .Text("Reporte de Citas")
+                    .Bold()
+                    .FontSize(18);
+
+                page.Content()
+                    .PaddingVertical(1, Unit.Centimetre)
+                    .Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3); // Cliente
+                            columns.RelativeColumn(2); // Fecha
+                            columns.RelativeColumn(2); // Hora
+                            columns.RelativeColumn(3); // Servicios
+                            columns.RelativeColumn(2); // Estado
+                        });
+
+                        // Encabezado de la tabla
+                        table.Header(header =>
+                        {
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Cliente").Bold();
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Fecha").Bold();
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Hora").Bold();
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Servicios").Bold();
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Estado").Bold();
+                        });
+
+                        // Datos de la tabla
+                        foreach (var cita in citasFiltradas)
+                        {
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Padding(5).Text(cita.Usuario.Nombre);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Padding(5).Text(cita.Fecha.ToShortDateString());
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Padding(5).Text(cita.Hora);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Padding(5).Text(string.Join(", ", cita.CitaServicios.Select(cs => cs.Servicio.TipoServicio)));
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Padding(5).Text(cita.Estado);
+                        }
+                    });
+
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Página ");
+                        x.CurrentPageNumber();
+                        x.Span(" de ");
+                        x.TotalPages();
+                    });
+            });
+        });
+
+        var pdfBytes = document.GeneratePdf();
+        return pdfBytes;
+    }
+}

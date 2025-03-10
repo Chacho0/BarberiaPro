@@ -1,0 +1,208 @@
+﻿@page "/admin-citas"
+@using BarberiaPro.Models
+@using BarberiaPro.Services
+@inject CitaService CitaService
+@inject IJSRuntime JSRuntime
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@using QuestPDF.Infrastructure
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Environment
+@using System.IO
+
+<h2>Reporte de Citas</h2>
+<div class="content-container">
+    <!-- Filtros -->
+    <div class="filtros">
+        <input type="text" @bind="filtroNombreCliente" placeholder="Buscar por nombre del cliente" />
+        <input type="text" @bind="filtroNombreEmpleado" placeholder="Buscar por nombre del empleado" />
+        <select @bind="filtroMes">
+            <option value="">Todos los meses</option>
+            @for (int i = 1; i <= 12; i++)
+            {
+                <option value="@i">@i</option>
+            }
+        </select>
+        <select @bind="filtroAño">
+            <option value="">Todos los años</option>
+            @for (int i = DateTime.Now.Year - 5; i <= DateTime.Now.Year; i++)
+            {
+                <option value="@i">@i</option>
+            }
+        </select>
+        <select @bind="filtroEstado">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendientes</option>
+            <option value="Confirmada">Confirmadas</option>
+            <option value="Cancelada">Canceladas</option>
+        </select>
+        <button @onclick="FiltrarCitas">Filtrar</button>
+    </div>
+
+    <!-- Botón para generar el reporte en PDF -->
+    <button @onclick="GenerarReportePdf" class="btn-reporte">Generar Reporte PDF</button>
+
+    <!-- Listado de citas -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre del Cliente</th>
+                <th>Nombre del Empleado</th>
+                <th>Fecha de Cita</th>
+                <th>Hora de Cita</th>
+                <th>Estado</th>
+                <th>Servicios</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cita in citasFiltradas)
+            {
+                <tr>
+                    <td>@cita.NombreCliente</td>
+                    <td>@cita.NombreEmpleado</td>
+                    <td>@cita.FechaCita.ToShortDateString()</td>
+                    <td>@cita.HoraCita</td>
+                    <td>@cita.Estado</td>
+                    <td>@string.Join(", ", cita.Servicios)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<CitaService.CitaInfo> citas = new();
+    private List<CitaService.CitaInfo> citasFiltradas = new();
+    private string filtroNombreCliente = string.Empty;
+    private string filtroNombreEmpleado = string.Empty;
+    private int? filtroMes = null;
+    private int? filtroAño = null;
+    private string filtroEstado = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener todas las citas con sus detalles
+        citas = await CitaService.ObtenerCitasConDetallesAsync();
+        citasFiltradas = citas;
+    }
+
+    private void FiltrarCitas()
+    {
+        // Aplicar filtros
+        citasFiltradas = citas
+            .Where(c => string.IsNullOrEmpty(filtroNombreCliente) || c.NombreCliente.Contains(filtroNombreCliente, StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.IsNullOrEmpty(filtroNombreEmpleado) || c.NombreEmpleado.Contains(filtroNombreEmpleado, StringComparison.OrdinalIgnoreCase))
+            .Where(c => !filtroMes.HasValue || c.FechaCita.Month == filtroMes)
+            .Where(c => !filtroAño.HasValue || c.FechaCita.Year == filtroAño)
+            .Where(c => string.IsNullOrEmpty(filtroEstado) || c.Estado == filtroEstado)
+            .ToList();
+    }
+
+    private async Task GenerarReportePdf()
+    {
+        var pdfBytes = await GenerarPdfAsync();
+        var base64String = Convert.ToBase64String(pdfBytes);
+        await JSRuntime.InvokeVoidAsync("descargarArchivo", base64String, "ReporteCitas.pdf");
+    }
+
+    private async Task<byte[]> GenerarPdfAsync()
+    {
+        byte[] logoBytes;
+
+        // Obtén la ruta completa al archivo de imagen
+        var imagePath = Path.Combine(Environment.WebRootPath, "Perfiles", "Logos.jpeg");
+
+        // Intenta leer la imagen
+        try
+        {
+            logoBytes = await File.ReadAllBytesAsync(imagePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al leer la imagen: {ex.Message}");
+            return null;
+        }
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(12));
+
+                page.Header()
+                    .Row(row =>
+                    {
+                        if (logoBytes != null)
+                        {
+                            using (var stream = new MemoryStream(logoBytes))
+                            {
+                                row.RelativeItem(1).Image(stream);
+                            }
+                        }
+                        else
+                        {
+                            row.RelativeItem(1).Text("Logo no disponible");
+                        }
+
+                        row.RelativeItem(3)
+                            .Column(column =>
+                            {
+                                column.Item().AlignCenter().Text("Reporte de Citas").Bold().FontSize(18);
+                                column.Item().AlignCenter().Text($"Fecha: {DateTime.Now.ToShortDateString()}").FontSize(12);
+                            });
+                    });
+
+                page.Content()
+                    .PaddingVertical(1, Unit.Centimetre)
+                    .Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(2); // Nombre del Cliente
+                            columns.RelativeColumn(2); // Nombre del Empleado
+                            columns.RelativeColumn(2); // Fecha de Cita
+                            columns.RelativeColumn(2); // Hora de Cita
+                            columns.RelativeColumn(2); // Estado
+                            columns.RelativeColumn(3); // Servicios
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Nombre del Cliente").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Nombre del Empleado").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Fecha de Cita").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Hora de Cita").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Estado").Bold().FontSize(13);
+                            header.Cell().Background(Colors.Grey.Lighten2).Border(1).BorderColor(Colors.Black).Padding(5).Text("Servicios").Bold().FontSize(13);
+                        });
+
+                        foreach (var cita in citasFiltradas)
+                        {
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.NombreCliente);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.NombreEmpleado);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.FechaCita.ToShortDateString());
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.HoraCita);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(cita.Estado);
+                            table.Cell().Border(1).BorderColor(Colors.Grey.Darken1).Background(citasFiltradas.IndexOf(cita) % 2 == 0 ? Colors.White : Colors.Grey.Lighten5).Padding(5).Text(string.Join(", ", cita.Servicios));
+                        }
+                    });
+
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Página ");
+                        x.CurrentPageNumber();
+                        x.Span(" de ");
+                        x.TotalPages();
+                    });
+            });
+        });
+
+        var pdfBytes = document.GeneratePdf();
+        return pdfBytes;
+    }
+}

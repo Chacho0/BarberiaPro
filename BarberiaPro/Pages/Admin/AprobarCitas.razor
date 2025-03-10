@@ -48,12 +48,22 @@
 
                     <div class="form-group">
                         <label>Fecha:</label>
-                        <InputDate @bind-Value="citaSeleccionada.Fecha" class="form-control" />
+                        <InputDate @bind-Value="citaSeleccionada.Fecha" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <div class="form-group">
                         <label>Hora:</label>
-                        <InputText @bind-Value="citaSeleccionada.Hora" class="form-control" placeholder="HH:mm" />
+                        <InputSelect @bind-Value="citaSeleccionada.Hora" class="form-control">
+                            @for (int hour = 8; hour <= 20; hour++) // Horario de 8 AM a 8 PM
+                            {
+                                <option value="@($"{hour:D2}:00")">
+                                    @($"{(hour % 12 == 0 ? 12 : hour % 12)}:00 {(hour < 12 ? "AM" : "PM")}")
+                                </option>
+                                <option value="@($"{hour:D2}:30")">
+                                    @($"{(hour % 12 == 0 ? 12 : hour % 12)}:30 {(hour < 12 ? "AM" : "PM")}")
+                                </option>
+                            }
+                        </InputSelect>
                     </div>
 
                     <div class="modal-botones">
@@ -118,7 +128,7 @@
 
             // Cerrar el modal y recargar la página
             mostrarModalAprobarCita = false;
-            Navigation.NavigateTo("/aprobar-citas", forceLoad: true);
+           
         }
     }
 

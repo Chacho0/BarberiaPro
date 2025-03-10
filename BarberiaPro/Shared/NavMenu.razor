@@ -2,12 +2,12 @@
 @using BarberiaPro.Services
 @inject UserStateService UserStateService
 @inject UsuarioService UsuarioService
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <!-- Agrega la imagen del logo aquí -->
-        <a class="navbar-brand" href="">
-        
+        <a class="navbar-brand" >
             Barberia RD
         </a>
 
@@ -19,81 +19,138 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-        
         <div class="nav-item px-3">
             <img src="/Logos.jpeg" style="height: 150px; width: 150px; border-radius: 50%; margin-left: 30px;" />
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
         </div>
+
         <!-- Mostrar enlace solo si el usuario es Admin -->
         @if (TieneAcceso(TipoRolEnum.Admin))
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="control-usuarios">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Control de Usuarios
+                    <i class="fa-solid fa-users-cog"></i> Control de Usuarios
                 </NavLink>
             </div>
         }
-        <!-- Mostrar enlace solo si el usuario es Admin -->
+
         @if (TieneAcceso(TipoRolEnum.Admin))
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="control-servicios">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Control de Servicios
+                    <span class="fas fa-cut"></span> Control de Servicios
                 </NavLink>
             </div>
         }
-        <!-- Mostrar enlace solo si el usuario es Admin -->
+
         @if (TieneAcceso(TipoRolEnum.Admin))
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="aprobar-citas">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Solicitudes de Citas
+                    <span class="fas fa-calendar-check"></span> Solicitudes de Citas
                 </NavLink>
             </div>
-        } @if (TieneAcceso(TipoRolEnum.Admin))
+        }
+
+        @if (TieneAcceso(TipoRolEnum.Admin))
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="admin-clientes">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Listado de Pagos Citas
+                    <span class="fas fa-file-invoice-dollar"></span> Listado de Pagos Citas
+                </NavLink>
+            </div>
+        }@if (TieneAcceso(TipoRolEnum.Admin))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="dropdown-item" href="admin-reporte-citas-procesadas">
+                    <span class="fas fa-file-invoice"></span> Reporte de Citas Procesadas
                 </NavLink>
             </div>
         }
-        @if (TieneAcceso(TipoRolEnum.Cliente))
-        {
 
+        <!-- Menú desplegable para Reportes -->
+        @if (TieneAcceso(TipoRolEnum.Admin))
+        {
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="cliente-inicio">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Solicitar Citas
+                <NavLink class="dropdown-item" href="admin-citas">
+                    <span class="fas fa-calendar-alt"></span> Reporte de Citas
                 </NavLink>
             </div>
+        }
+        @if (TieneAcceso(TipoRolEnum.Admin))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="dropdown-item" href="admin-reporte-clientes">
+                    <span class="fas fa-users"></span> Reporte de Clientes
+                </NavLink>
+            </div>
+        }
 
-        } 
+        <!-- Menú desplegable para Reportes -->
         @if (TieneAcceso(TipoRolEnum.Cliente))
         {
-
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="perfil-cliente">
-                    <span class="oi oi-person" aria-hidden="true"></span> Perfil
+                    <span class="fas fa-user"></span> Perfil
                 </NavLink>
             </div>
+        }
 
-        }@if (TieneAcceso(TipoRolEnum.Cliente))
+        @if (TieneAcceso(TipoRolEnum.Cliente))
         {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="perfil-cliente">
+                    <span class="fas fa-user"></span> Perfil
+                </NavLink>
+            </div>
+        }
 
+        @if (TieneAcceso(TipoRolEnum.Cliente))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="cliente-inicio">
+                    <span class="fas fa-calendar-plus"></span> Solicitar Citas
+                </NavLink>
+            </div>
+        }
+
+        @if (TieneAcceso(TipoRolEnum.Cliente))
+        {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="mis-citas">
-                    <span class="oi oi-person" aria-hidden="true"></span> Mis Citas
+                    <span class="fas fa-calendar-alt"></span> Mis Citas
                 </NavLink>
             </div>
-
         }
+
+        @if (TieneAcceso(TipoRolEnum.Empleado))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="perfil-empleado">
+                    <span class="fas fa-user-tie"></span> Perfil
+                </NavLink>
+            </div>
+        }
+
+        @if (TieneAcceso(TipoRolEnum.Empleado))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="empleado-citas">
+                    <span class="fas fa-calendar-check"></span> Mis Citas
+                </NavLink>
+            </div>
+        }
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="">
+                <span class="fas fa-sign-out-alt"></span> Cerrar Sesión
+            </NavLink>
+        </div>
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private bool collapseReportMenu = true; // Nueva variable para el menú de reportes
     private TipoRolEnum? rolUsuario;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
@@ -103,18 +160,21 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
+    private void ToggleReportMenu() // Nuevo método para el menú de reportes
+    {
+        collapseReportMenu = !collapseReportMenu;
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        // Obtener el rol del usuario al inicializar el componente
         if (UserStateService.UserId.HasValue)
         {
             rolUsuario = await UsuarioService.ObtenerRolUsuarioAsync(UserStateService.UserId.Value);
         }
     }
 
-    // Método para verificar si el usuario tiene acceso a una página
     private bool TieneAcceso(TipoRolEnum rolRequerido)
     {
         return rolUsuario == rolRequerido;
     }
-}
+}  

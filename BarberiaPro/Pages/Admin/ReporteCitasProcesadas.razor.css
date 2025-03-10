@@ -19,11 +19,13 @@
     border-radius: 5px;
     margin-right: 5px;
 }
+
 .filtros input, .filtros select, .filtros button {
     padding: 8px; /* Reduce el padding */
     font-size: 14px; /* Reduce el tamaño de la fuente */
     margin-right: 8px; /* Ajusta los márgenes */
 }
+
 .filtros {
     background-color: white; /* Fondo blanco para los filtros */
     padding: 15px;
@@ -56,6 +58,7 @@ th {
 tr:nth-child(even) {
     background-color: #f2f2f2;
 }
+
 .container {
     max-width: 900px;
     margin: auto;
@@ -134,6 +137,7 @@ tr:nth-child(even) {
     text-align: right;
     margin-top: 20px;
 }
+
 .btn-ver-info {
     background-color: #17a2b8; /* Color azul turquesa */
     color: white;
@@ -157,6 +161,7 @@ tr:nth-child(even) {
         transform: translateY(0); /* Restablece la elevación al hacer clic */
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra más suave */
     }
+
 .btn-aprobar,
 .btn-no-aprobar,
 .btn-cerrar {
@@ -199,6 +204,7 @@ tr:nth-child(even) {
     background-color: #5a6268; /* Gris más oscuro */
     transform: translateY(-2px);
 }
+
 .content-container {
     background-color: white; /* Fondo blanco para el contenido */
     padding: 20px;
@@ -209,6 +215,7 @@ tr:nth-child(even) {
     position: relative;
     z-index: 1; /* Asegura que el contenido esté por encima del fondo */
 }
+
 @media (max-width: 768px) {
     .modal-content {
         max-width: 90%;

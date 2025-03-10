@@ -7,7 +7,6 @@
 
 <div class="fondo-container">  
     <div class="login-container">  
-        <!-- Logo en la parte superior -->  
         <img src="/Perfiles/Logos.jpeg" alt="Logo" class="logo-login" />  
 
         <h3>Login</h3>  
@@ -30,24 +29,39 @@
     private string errorMessage = string.Empty;  
 
     private async Task IniciarSesion()  
+{  
+    errorMessage = string.Empty;  
+
+    var result = await AuthService.LoginAsync(correo, password);  
+
+    if (result.Success)  
     {  
-        errorMessage = string.Empty;  
+        UserStateService.SetUserId(result.UserId);  
 
-        var result = await AuthService.LoginAsync(correo, password);  
-
-        if (result.Success)  
+        // Redirigir según el rol del usuario  
+        switch (result.Role)   
         {  
-            UserStateService.SetUserId(result.UserId); // Guardar el ID del usuario  
-            Navigation.NavigateTo("/home");  
-        }  
-        else  
-        {  
-            errorMessage = result.ErrorMessage;  
+            case "Admin":  
+                Navigation.NavigateTo("/control-usuarios");  
+                break;  
+            case "Cliente":  
+                Navigation.NavigateTo("/perfil-cliente");  
+                break;  
+            case "Empleado":  
+                Navigation.NavigateTo("/perfil-empleado");  
+                break;  
+            default:  
+                Navigation.NavigateTo("/home"); // Página de inicio por defecto  
+                break;  
         }  
     }  
-
+    else  
+    {  
+        errorMessage = result.ErrorMessage;  
+    }  
+}  
     private void IrARegistro()  
     {  
-        Navigation.NavigateTo("/registro"); // Redirigir a la página de registro  
+        Navigation.NavigateTo("/registro");  
     }  
 }  
